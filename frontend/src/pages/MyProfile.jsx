@@ -23,7 +23,7 @@ export default function MyProfile() {
 
         {/* Header */}
         <div className="bg-blue-600 p-6 text-white">
-          <h1 className="text-2xl font-bold">My Patient Profile</h1>
+          <h1 className="text-2xl font-bold">Patient Profile</h1>
           <p className="text-sm opacity-80">Manage your personal health information</p>
         </div>
 
