@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import PatientProfileCard from './components/PatientProfileCard';
-
+import UpdateContactModal from './components/UpdateContactModal';
 
 const PatientDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -51,7 +51,13 @@ const PatientDashboard = () => {
         </div>
       </div>
 
-      
+      {isModalOpen && (
+        <UpdateContactModal 
+          currentContact={patient.emergencyContact} 
+          onClose={() => setIsModalOpen(false)}
+          onSave={handleUpdateContact}
+        />
+      )}
     </div>
   );
 };
