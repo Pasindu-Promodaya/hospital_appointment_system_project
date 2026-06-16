@@ -5,6 +5,8 @@ import com.hospital.appointment.system.dto.AppointmentResponse;
 import com.hospital.appointment.system.entity.Appointment;
 import com.hospital.appointment.system.repository.AppointmentRepository;
 import com.hospital.appointment.system.service.AppointmentService;
+import com.hospital.appointment.system.exception.AppointmentAlreadyBookedException;
+import com.hospital.appointment.system.exception.AppointmentNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -27,7 +29,9 @@ public class AppointmentServiceImpl implements AppointmentService {
                 );
 
         if (alreadyBooked) {
-            throw new RuntimeException("Doctor is already booked for this time slot.");
+            throw new AppointmentAlreadyBookedException(
+            "Doctor is already booked for this time slot."
+            );
         }
 
         Appointment appointment = Appointment.builder()
@@ -55,7 +59,8 @@ public class AppointmentServiceImpl implements AppointmentService {
     public AppointmentResponse getAppointmentById(Long id) {
 
         Appointment appointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+                .orElseThrow(() -> 
+                    new AppointmentNotFoundException("Appointment not found"));
 
         return mapToResponse(appointment);
     }
@@ -82,7 +87,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     public AppointmentResponse cancelAppointment(Long id) {
 
         Appointment appointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+                .orElseThrow(() -> new AppointmentNotFoundException("Appointment not found"));
 
         appointment.setStatus("CANCELLED");
 
