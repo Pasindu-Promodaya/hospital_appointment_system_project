@@ -10,6 +10,7 @@ export default function Navbar() {
         <Link className="text-gray-600 hover:text-blue-600" to="/">
           Profile
         </Link>
+          <Link to="/queue" className="hover:text-blue-600 transition">Patient Queue</Link>
 
         <Link className="text-gray-600 hover:text-blue-600" to="/dashboard">
           Medical History
