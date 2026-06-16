@@ -47,6 +47,19 @@ public class GlobalExceptionHandler {
     error.put("message", ex.getMessage());
 
     return error;
-}
+    }
+
+    @ExceptionHandler(PatientNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Map<String, Object> handlePatientNotFound(
+        PatientNotFoundException ex) {
+
+    Map<String, Object> error = new HashMap<>();
+    error.put("timestamp", LocalDateTime.now());
+    error.put("status", 404);
+    error.put("message", ex.getMessage());
+
+    return error;
+    }
 
 }
