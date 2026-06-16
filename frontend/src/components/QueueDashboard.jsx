@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, UserCheck, Clock, RefreshCw } from 'lucide-react';
+import { Users, UserCheck, Clock, RefreshCw, UserPlus } from 'lucide-react';
 import axios from 'axios';
 
 function QueueDashboard() {
@@ -7,78 +7,102 @@ function QueueDashboard() {
     const [servedCount, setServedCount] = useState(0);
     const [loading, setLoading] = useState(false);
 
-    // get all queue details and doctor status from backend
-    const fetchQueueData = async () => {
+    // Default selection is set to doctor 1
+    const [selectedDoctorId, setSelectedDoctorId] = useState(1);
+
+    // List of doctors with their specialties to display dynamically on the cards
+    const doctorsList = {
+        1: { name: "Dr. Kasun Rathnayaka", dept: "OPD" },
+        2: { name: "Dr. Nimal Ekanayaka", dept: "Dental" },
+        3: { name: "Dr. Amal Perera", dept: "Pediatric" },
+        4: { name: "Dr. Kamal Bandara", dept: "Cardiology" },
+        5: { name: "Dr. Sunil Silva", dept: "Neurology" }
+    };
+
+    // Get active queue data and daily statistics based on the selected doctor ID
+    const fetchQueueData = async (doctorId) => {
+        const idToSend = doctorId || selectedDoctorId;
         setLoading(true);
         try {
-            // load active patient list
-            const queueResponse = await axios.get('http://localhost:8080/api/queue', { withCredentials: true });
+            // Fetching active patients list for the doctor
+            const queueResponse = await axios.get(`http://localhost:8080/api/queue/doctor/${idToSend}`, { withCredentials: true });
             setQueue(queueResponse.data);
 
-            // get today served count for doctor 1
-            const analyticsResponse = await axios.get('http://localhost:8080/api/queue/analytics/1', { withCredentials: true });
+            // Fetching total served analytics count for the doctor
+            const analyticsResponse = await axios.get(`http://localhost:8080/api/queue/analytics/${idToSend}`, { withCredentials: true });
             if (analyticsResponse.data && analyticsResponse.data.totalServed !== undefined) {
                 setServedCount(analyticsResponse.data.totalServed);
             }
         } catch (error) {
-            console.error("Error fetching queue or analytics data:", error);
+            console.error("Error fetching data:", error);
         } finally {
             setLoading(false);
         }
     };
 
-    // call next patient and refresh dashboard lists
-    const handleCallNext = async (patientId) => {
+    // Handler to call the next patient in the queue sequentially
+    const handleCallNextSequential = async () => {
         try {
-            await axios.put(`http://localhost:8080/api/queue/${patientId}/serve`, {}, { withCredentials: true });
-            await fetchQueueData();
+            await axios.post(`http://localhost:8080/api/queue/next/${selectedDoctorId}`, {}, { withCredentials: true });
+            await fetchQueueData(selectedDoctorId); // Instantly refresh UI state after updating the backend
         } catch (error) {
             console.error("Error calling next patient:", error);
-            alert("Failed to call the next patient. Please try again.");
+            alert("Failed to call next patient.");
         }
     };
 
-    // initial data load when page opens
+    // Update doctor selection state and trigger a fresh data fetch immediately
+    const handleDoctorChange = (e) => {
+        const newDoctorId = Number(e.target.value);
+        setSelectedDoctorId(newDoctorId);
+        fetchQueueData(newDoctorId); // Explicitly passing the new ID to prevent stale state issues
+    };
+
+    // Load initial queue state for Doctor 1 on initial component mount
     useEffect(() => {
-        let isMounted = true;
-
-        const loadData = async () => {
-            if (isMounted) {
-                await fetchQueueData();
-            }
-        };
-
-        loadData();
-
-        return () => {
-            isMounted = false;
-        };
+        fetchQueueData(1);
     }, []);
-
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800 p-6 font-sans">
 
-            {/* Header */}
-            <div className="flex justify-between items-center border-b border-slate-200 pb-4 mb-6">
+            {/* Upper Header Section */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4 mb-6">
                 <div>
                     <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Patient Queue & Admin Dashboard</h1>
                     <p className="text-slate-500 text-sm mt-1">Welcome back, Mahima</p>
                 </div>
-                <button
-                    onClick={fetchQueueData}
-                    disabled={loading}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white px-5 py-2.5 rounded-xl font-semibold shadow-sm transition-all duration-200"
-                >
-                    <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
-                    {loading ? "Refreshing..." : "Refresh Queue"}
-                </button>
+
+                {/* Control Actions Area */}
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                    {/* Doctor Selection Dropdown */}
+                    <select
+                        value={selectedDoctorId}
+                        onChange={handleDoctorChange}
+                        className="bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
+                    >
+                        <option value={1}>Dr. Kasun Rathnayaka (OPD)</option>
+                        <option value={2}>Dr. Nimal Ekanayaka (Dental)</option>
+                        <option value={3}>Dr. Amal Perera (Pediatric)</option>
+                        <option value={4}>Dr. Kamal Bandara (Cardiology)</option>
+                        <option value={5}>Dr. Sunil Silva (Neurology)</option>
+                    </select>
+
+                    <button
+                        onClick={() => fetchQueueData(selectedDoctorId)}
+                        disabled={loading}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white px-5 py-2.5 rounded-xl font-semibold shadow-sm transition-all duration-200 text-sm"
+                    >
+                        <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                        {loading ? "Refreshing..." : "Refresh"}
+                    </button>
+                </div>
             </div>
 
-            {/* Main Layout */}
+            {/* Main Grid Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {/* Patient Table */}
+                {/* Left/Middle: Patient Queue Table Card */}
                 <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
                     <div className="flex items-center gap-2.5 mb-5 border-b border-slate-100 pb-3">
                         <Users className="text-blue-600" size={22} />
@@ -92,13 +116,12 @@ function QueueDashboard() {
                                 <th className="pb-3">Token No</th>
                                 <th className="pb-3">Patient Name</th>
                                 <th className="pb-3">Status</th>
-                                <th className="pb-3 text-right">Action</th>
                             </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                             {queue.length === 0 ? (
                                 <tr>
-                                    <td colSpan="4" className="py-12 text-center text-slate-400 font-medium">
+                                    <td colSpan="3" className="py-12 text-center text-slate-400 font-medium">
                                         No patients currently in the waiting queue.
                                     </td>
                                 </tr>
@@ -107,27 +130,16 @@ function QueueDashboard() {
                                     <tr key={patient.id} className="text-sm hover:bg-slate-50/80 transition-colors duration-150">
                                         <td className="py-4 font-bold text-blue-600">#{patient.tokenNumber}</td>
                                         <td className="py-4 font-semibold text-slate-700">{patient.patientName}</td>
-
-                                        {/* status check - show green for active consultation */}
                                         <td className="py-4">
                                             {patient.status === 'IN_CONSULTATION' ? (
                                                 <span className="bg-emerald-50 text-emerald-600 border border-emerald-200/60 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide animate-pulse">
-                                                    In Consultation
-                                                </span>
+                                                        In Consultation
+                                                    </span>
                                             ) : (
                                                 <span className="bg-amber-50 text-amber-600 border border-amber-200/60 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
-                                                    Waiting
-                                                </span>
+                                                        Waiting
+                                                    </span>
                                             )}
-                                        </td>
-
-                                        <td className="py-4 text-right">
-                                            <button
-                                                onClick={() => handleCallNext(patient.id)}
-                                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition duration-150"
-                                            >
-                                                Call Next
-                                            </button>
                                         </td>
                                     </tr>
                                 ))
@@ -137,37 +149,60 @@ function QueueDashboard() {
                     </div>
                 </div>
 
-                {/* Right Side Cards */}
+                {/* Right Section: Now Serving & Analytics */}
                 <div className="space-y-6">
 
-                    {/* Current Patient Card */}
-                    <div className="bg-blue-600 rounded-2xl p-6 shadow-md shadow-blue-100 text-white relative overflow-hidden">
+                    {/* Main Now Serving Card with Main Call Next Button */}
+                    <div className="bg-blue-600 rounded-2xl p-6 shadow-md shadow-blue-100 text-white relative overflow-hidden flex flex-col justify-between min-h-[260px]">
                         <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-blue-500 rounded-full opacity-20"></div>
-                        <div className="flex items-center gap-2.5 mb-5 border-b border-blue-500/40 pb-3">
-                            <UserCheck size={22} />
-                            <h2 className="text-xl font-bold">Now Serving</h2>
-                        </div>
-                        <div className="text-center py-4 relative z-10">
-                            <p className="text-xs text-blue-100 uppercase font-bold tracking-widest opacity-90">Current Patient</p>
-                            <h3 className="text-3xl font-black mt-1.5 drop-shadow-sm">
-                                {queue.length > 0 ? queue[0].patientName : "No Active Patient"}
-                            </h3>
-                            <div className="inline-block bg-white text-blue-600 rounded-xl px-5 py-2 mt-5 text-xl font-black shadow-sm">
-                                Token #{queue.length > 0 ? queue[0].tokenNumber : "--"}
+
+                        <div>
+                            <div className="flex items-center justify-between border-b border-blue-500/40 pb-3 mb-4">
+                                <div className="flex items-center gap-2.5">
+                                    <UserCheck size={22} />
+                                    <h2 className="text-xl font-bold">Now Serving</h2>
+                                </div>
+                                <span className="bg-blue-500 text-white text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-md border border-blue-400/30 tracking-wider">
+                                    {doctorsList[selectedDoctorId]?.dept || "General"}
+                                </span>
                             </div>
+
+                            <div className="text-center py-2 relative z-10">
+                                <p className="text-[11px] text-blue-200 uppercase font-bold tracking-widest opacity-90">
+                                    {doctorsList[selectedDoctorId]?.name || "Doctor"}
+                                </p>
+                                <h3 className="text-2xl font-black mt-1.5 drop-shadow-sm w-full max-w-[240px] mx-auto block truncate">
+                                    {queue.length > 0 && queue[0].status === 'IN_CONSULTATION' ? queue[0].patientName : "No Active Patient"}
+                                </h3>
+                                <div className="inline-block bg-white text-blue-600 rounded-xl px-4 py-1.5 mt-3 text-lg font-black shadow-sm">
+                                    Token {queue.length > 0 && queue[0].status === 'IN_CONSULTATION' ? `#${queue[0].tokenNumber}` : "--"}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Centralized Call Next Button */}
+                        <div className="mt-4 pt-2 border-t border-blue-500/30 relative z-10">
+                            <button
+                                onClick={handleCallNextSequential}
+                                className="w-full bg-white hover:bg-slate-100 text-blue-600 font-bold py-3 px-4 rounded-xl shadow-md transition duration-150 flex items-center justify-center gap-2 text-sm uppercase tracking-wider"
+                            >
+                                <UserPlus size={18} />
+                                Call Next Patient
+                            </button>
                         </div>
                     </div>
 
-                    {/* Summary Cards */}
+                    {/* Statistics Grid */}
                     <div className="grid grid-cols-2 gap-4">
-
                         {/* Total Waiting */}
                         <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 text-center">
                             <div className="inline-flex p-3 bg-amber-50 rounded-xl mb-3">
                                 <Clock className="text-amber-500" size={24} />
                             </div>
                             <span className="text-xs text-slate-400 font-bold block uppercase tracking-wider">Total Waiting</span>
-                            <span className="text-2xl font-black text-slate-800 mt-1 block">{queue.length} Patients</span>
+                            <span className="text-xl font-black text-slate-800 mt-1 block">
+                                {queue.filter(q => q.status === 'WAITING').length} Patients
+                            </span>
                         </div>
 
                         {/* Served Today */}
@@ -176,9 +211,8 @@ function QueueDashboard() {
                                 <UserCheck className="text-emerald-500" size={24} />
                             </div>
                             <span className="text-xs text-slate-400 font-bold block uppercase tracking-wider">Served Today</span>
-                            <span className="text-2xl font-black text-slate-800 mt-1 block">{servedCount} Patients</span>
+                            <span className="text-xl font-black text-slate-800 mt-1 block">{servedCount} Patients</span>
                         </div>
-
                     </div>
 
                 </div>
