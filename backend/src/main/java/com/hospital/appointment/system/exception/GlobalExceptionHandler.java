@@ -36,4 +36,17 @@ public class GlobalExceptionHandler {
         return error;
     }
 
+    @ExceptionHandler(DoctorNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public Map<String, Object> handleDoctorNotFound(
+        DoctorNotFoundException ex) {
+
+    Map<String, Object> error = new HashMap<>();
+    error.put("timestamp", LocalDateTime.now());
+    error.put("status", 404);
+    error.put("message", ex.getMessage());
+
+    return error;
+}
+
 }
