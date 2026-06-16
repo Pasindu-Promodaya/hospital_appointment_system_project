@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import PatientProfileCard from './components/PatientProfileCard';
+import MedicalTimeline from './components/MedicalTimeline';
 import UpdateContactModal from './components/UpdateContactModal';
 
 const PatientDashboard = () => {
@@ -47,7 +48,11 @@ const PatientDashboard = () => {
             />
           </div>
 
-          
+          <div className="md:col-span-2">
+            <MedicalTimeline 
+              encounters={patient.encounters} 
+            />
+          </div>
         </div>
       </div>
 
