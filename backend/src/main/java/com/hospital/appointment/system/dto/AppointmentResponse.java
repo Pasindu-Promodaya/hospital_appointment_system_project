@@ -18,7 +18,11 @@ public class AppointmentResponse {
 
     private Long doctorId;
 
+    private String doctorName;
+
     private Long patientId;
+
+    private String patientName;
 
     private LocalDate appointmentDate;
 

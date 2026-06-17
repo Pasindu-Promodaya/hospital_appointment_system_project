@@ -1,41 +1,22 @@
-import axios from "axios";
+import api from "../api/axios";
 
-const API = axios.create({
-  baseURL: "http://localhost:8080/api",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+export const getAppointments = () =>
+    api.get("/appointments");
 
+export const getAppointment = (id) =>
+    api.get(`/appointments/${id}`);
 
-// ================= DOCTORS =================
-export const getDoctors = () => API.get("/doctors");
+export const createAppointment = (appointment) =>
+    api.post("/appointments", appointment);
 
+export const updateAppointment = (id, appointment) =>
+    api.put(`/appointments/${id}`, appointment);
 
-// ================= APPOINTMENTS =================
-
-// Book appointment
-export const bookAppointment = (data) =>
-  API.post("/appointments", data);
-
-
-// Get all appointments of a patient
-export const getPatientAppointments = (patientId) =>
-  API.get(`/appointments/patient/${patientId}`);
-
-
-// Get all appointments of a doctor (optional use)
-export const getDoctorAppointments = (doctorId) =>
-  API.get(`/appointments/doctor/${doctorId}`);
-
-
-// Cancel appointment (YOU SAID PATCH WORKS)
 export const cancelAppointment = (id) =>
-  API.patch(`/appointments/${id}/cancel`);
+    api.patch(`/appointments/${id}/cancel`);
 
+export const getDoctorAppointments = (doctorId) =>
+    api.get(`/appointments/doctor/${doctorId}`);
 
-// Optional: get single appointment
-export const getAppointmentById = (id) =>
-  API.get(`/appointments/${id}`);
-
-export default API;
+export const getPatientAppointments = (patientId) =>
+    api.get(`/appointments/patient/${patientId}`);

@@ -1,200 +1,156 @@
-import { useState } from 'react';
-import { getPatientAppointments, cancelAppointment } from '../services/appointmentService';
+// src/pages/MyAppointments.jsx
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import {
+  getAppointments,
+  cancelAppointment,
+} from "../services/appointmentService";
+import AppointmentCard from "../components/AppointmentCard";
+import Loading from "../components/Loading";
+import Alert from '../components/Alert';
+import '../styles/App.css'; // ✅ Import CSS
 
-export default function MyAppointments() {
-  const [email, setEmail] = useState('');
+function MyAppointments() {
+  const location = useLocation();
+
   const [appointments, setAppointments] = useState([]);
-  const [searched, setSearched] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [cancellingId, setCancellingId] = useState(null);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [confirmCancel, setConfirmCancel] = useState(null); // { id, doctorName }
+  const [loading, setLoading] = useState(true);
+  const [showDeleted, setShowDeleted] = useState(false);
+  
+  const [hiddenAppointments, setHiddenAppointments] = useState(new Set());
 
-  // ─── Look up appointments by email ──────────────────────────────────────────
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      const res = await getPatientAppointments(email.trim());
-      setAppointments(res.data);
-      setSearched(true);
-    } catch {
-      setErrorMsg('Could not retrieve appointments. Please check your email and try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [alertMsg, setAlertMsg] = useState(location.state?.alertMsg || null);
+  const [alertType, setAlertType] = useState(location.state?.alertType || 'success');
 
-  // ─── Cancel an appointment ───────────────────────────────────────────────────
-  const handleCancel = async () => {
-    const { id, doctorName } = confirmCancel;
-    setConfirmCancel(null);
-    setCancellingId(id);
-    setErrorMsg('');
+  const loadAppointments = async () => {
     try {
-      const res = await cancelAppointment(id, email);
-      setAppointments(prev =>
-        prev.map(a => a.id === id ? { ...a, status: 'CANCELLED' } : a)
-      );
-      setSuccessMsg(`Appointment with ${doctorName} has been cancelled.`);
+      const response = await getAppointments();
+      setAppointments(response.data);
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Failed to cancel appointment.');
-    } finally {
-      setCancellingId(null);
+      console.log(err);
+      setAlertMsg("Failed to load appointments. Please refresh the page.");
+      setAlertType("error");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadAppointments();
+
+    if (location.state?.alertMsg) {
+      window.history.replaceState({}, document.title);
+    }
+  }, []);
+
+  const handleCancel = async (id) => {
+    try {
+      await cancelAppointment(id);
+
+      setAlertMsg("Appointment cancelled successfully.");
+      setAlertType("success");
+
+      await loadAppointments();
+
+    } catch (err) {
+      console.error("Cancel failed:", err);
+
+      const errorMessage =
+        err.response?.data?.message ||
+        "Failed to cancel appointment. Please try again.";
+
+      setAlertMsg(errorMessage);
+      setAlertType("error");
     }
   };
 
-  // ─── Helpers ─────────────────────────────────────────────────────────────────
-  const formatTime = (t) => {
-    if (!t) return '';
-    const [h, m] = t.split(':');
-    const hour = parseInt(h);
-    return `${hour > 12 ? hour - 12 : hour || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
+  const handleDeleteCancelled = (id) => {
+    setHiddenAppointments(prev => new Set([...prev, id]));
+    setAlertMsg("Cancelled booking removed from view.");
+    setAlertType("success");
   };
 
-  const formatDate = (d) => {
-    if (!d) return '';
-    const date = new Date(d + 'T00:00:00');
-    return {
-      day: date.getDate(),
-      month: date.toLocaleString('en-US', { month: 'short' }),
-      full: date.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' }),
-    };
+  const handleRestoreAll = () => {
+    setHiddenAppointments(new Set());
+    setAlertMsg("All cancelled bookings restored.");
+    setAlertType("success");
   };
 
-  const badgeClass = (status) => ({
-    CONFIRMED: 'badge badge-confirmed',
-    CANCELLED: 'badge badge-cancelled',
-    COMPLETED: 'badge badge-completed',
-  }[status] || 'badge');
+  const toggleShowDeleted = () => {
+    setShowDeleted(!showDeleted);
+  };
 
-  const activeCount = appointments.filter(a => a.status === 'CONFIRMED').length;
+  const filteredAppointments = appointments.filter((appointment) => {
+    if (hiddenAppointments.has(appointment.id)) {
+      return false;
+    }
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+    if (showDeleted) {
+      return appointment.status === 'CANCELLED';
+    } else {
+      return appointment.status !== 'CANCELLED';
+    }
+  });
+
+  const visibleCancelledCount = appointments.filter(
+    app => app.status === 'CANCELLED' && !hiddenAppointments.has(app.id)
+  ).length;
+
+  if (loading) return <Loading />;
+
   return (
-    <div>
-      <div className="page-header">
-        <h1 className="page-title">My Appointments</h1>
-        <p className="page-subtitle">Enter your email address to view and manage your bookings.</p>
+    <div className="appointments-container">
+      <h2 className="appointments-heading">My Appointments</h2>
+
+      <Alert
+        type={alertType}
+        message={alertMsg}
+        onClose={() => setAlertMsg(null)}
+      />
+
+      {/* ✅ Toolbar with proper gap between elements */}
+      <div className="appointments-toolbar">
+        <button 
+          onClick={toggleShowDeleted}
+          className={`btn-toggle-cancelled ${showDeleted ? 'active' : 'inactive'}`}
+        >
+          {showDeleted ? 'Hide Cancelled' : 'Show Cancelled'}
+        </button>
+
+        {visibleCancelledCount > 0 && (
+          <span className="cancelled-count-badge">
+            {visibleCancelledCount} cancelled appointment{visibleCancelledCount > 1 ? 's' : ''}
+          </span>
+        )}
+
+        {hiddenAppointments.size > 0 && (
+          <button
+            onClick={handleRestoreAll}
+            className="btn-restore-all"
+          >
+            🔄 Restore All ({hiddenAppointments.size})
+          </button>
+        )}
       </div>
 
-      {/* ── Email Lookup Form ────────────────────────────────────────────── */}
-      <form className="lookup-form" onSubmit={handleSearch}>
-        <div className="form-group">
-          <label className="form-label">Email Address</label>
-          <input
-            type="email"
-            className="form-input"
-            placeholder="Enter the email you used to book"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
+      {filteredAppointments.length === 0 ? (
+        <div className="empty-state">
+          {showDeleted 
+            ? 'No cancelled appointments found.' 
+            : 'No active appointments found.'}
+        </div>
+      ) : (
+        filteredAppointments.map((appointment) => (
+          <AppointmentCard
+            key={appointment.id}
+            appointment={appointment}
+            onCancel={handleCancel}
+            onDeleteCancelled={handleDeleteCancelled}
+            showDeleteButton={appointment.status === 'CANCELLED'}
           />
-        </div>
-        <button type="submit" className="btn btn-primary" disabled={loading || !email.trim()}>
-          {loading ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Searching...</> : 'Find Appointments'}
-        </button>
-      </form>
-
-      {/* ── Alerts ──────────────────────────────────────────────────────── */}
-      {successMsg && (
-        <div className="alert alert-success" style={{ marginBottom: '1.25rem' }}>
-          ✓ {successMsg}
-          <button onClick={() => setSuccessMsg('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontWeight: 700 }}>✕</button>
-        </div>
-      )}
-      {errorMsg && (
-        <div className="alert alert-error" style={{ marginBottom: '1.25rem' }}>
-          ✕ {errorMsg}
-          <button onClick={() => setErrorMsg('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontWeight: 700 }}>✕</button>
-        </div>
-      )}
-
-      {/* ── Results ─────────────────────────────────────────────────────── */}
-      {searched && !loading && (
-        appointments.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">📋</div>
-            <div className="empty-title">No appointments found</div>
-            <div className="empty-msg">No bookings were found for <strong>{email}</strong>.</div>
-          </div>
-        ) : (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <p style={{ fontSize: '0.9rem', color: 'var(--clr-muted)' }}>
-                Found <strong style={{ color: 'var(--clr-text)' }}>{appointments.length}</strong> appointment{appointments.length !== 1 ? 's' : ''}
-                {activeCount > 0 && <> · <strong style={{ color: 'var(--clr-teal)' }}>{activeCount} confirmed</strong></>}
-              </p>
-            </div>
-
-            <div className="appointments-list">
-              {appointments.map(appt => {
-                const d = formatDate(appt.date);
-                const isCancelling = cancellingId === appt.id;
-                return (
-                  <div key={appt.id} className="appt-card" style={{ opacity: appt.status === 'CANCELLED' ? 0.7 : 1 }}>
-
-                    {/* Date block */}
-                    <div className="appt-date-block">
-                      <div className="appt-date-day">{d.day}</div>
-                      <div className="appt-date-month">{d.month}</div>
-                    </div>
-
-                    {/* Info */}
-                    <div className="appt-info">
-                      <div className="appt-doctor">Dr. {appt.doctorName.replace(/^Dr\.\s*/i, '')}</div>
-                      <div className="appt-spec">{appt.specialization}</div>
-                      <div className="appt-time">
-                        📅 {d.full} &nbsp;·&nbsp; 🕐 {formatTime(appt.startTime)} – {formatTime(appt.endTime)}
-                      </div>
-                      {appt.reason && <div className="appt-reason">"{appt.reason}"</div>}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="appt-actions">
-                      <span className={badgeClass(appt.status)}>{appt.status}</span>
-                      {appt.status === 'CONFIRMED' && (
-                        <button
-                          className="btn btn-danger"
-                          onClick={() => setConfirmCancel({ id: appt.id, doctorName: appt.doctorName })}
-                          disabled={isCancelling}
-                        >
-                          {isCancelling ? 'Cancelling...' : 'Cancel'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )
-      )}
-
-      {/* ── Cancel Confirmation Modal ────────────────────────────────────── */}
-      {confirmCancel && (
-        <div className="modal-overlay" onClick={() => setConfirmCancel(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h2 className="modal-title">Cancel Appointment?</h2>
-            <div className="modal-body">
-              <p style={{ color: 'var(--clr-muted)', fontSize: '0.92rem', lineHeight: 1.7 }}>
-                Are you sure you want to cancel your appointment with <strong>{confirmCancel.doctorName}</strong>?
-                <br />The time slot will be made available for other patients.
-              </p>
-            </div>
-            <div className="modal-actions">
-              <button className="btn btn-outline" onClick={() => setConfirmCancel(null)}>Keep Appointment</button>
-              <button className="btn btn-danger" style={{ background: 'var(--clr-danger)', color: 'white', border: 'none', padding: '0.65rem 1.25rem', fontWeight: 600 }} onClick={handleCancel}>
-                Yes, Cancel It
-              </button>
-            </div>
-          </div>
-        </div>
+        ))
       )}
     </div>
   );
 }
+
+export default MyAppointments;

@@ -1,40 +1,40 @@
-import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
-import BookAppointment from './pages/BookAppointment';
-import MyAppointments from './pages/MyAppointments';
-import './App.css';
+import { Routes, Route } from "react-router-dom";
 
-export default function App() {
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+
+import Home from "./pages/Home";
+import BookAppointment from "./pages/BookAppointment";
+import MyAppointments from "./pages/MyAppointments";
+import EditAppointment from "./pages/EditAppointment";
+
+function App() {
   return (
-    <BrowserRouter>
-      <div className="app-wrapper">
-        <header className="app-header">
-          <div className="header-inner">
-            <div className="brand">
-              <span className="brand-cross">✚</span>
-              <span className="brand-name">MediBook</span>
-            </div>
-            <nav className="main-nav">
-              <NavLink to="/" end className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                Book Appointment
-              </NavLink>
-              <NavLink to="/my-appointments" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                My Appointments
-              </NavLink>
-            </nav>
-          </div>
-        </header>
+    <>
+      <Navbar />
 
-        <main className="app-main">
-          <Routes>
-            <Route path="/" element={<BookAppointment />} />
-            <Route path="/my-appointments" element={<MyAppointments />} />
-          </Routes>
-        </main>
+      <div className="container">
+        <Routes>
+          <Route path="/" element={<Home />} />
 
-        <footer className="app-footer">
-          <p>© 2025 MediBook Hospital System · SWST 32043 Assignment 02</p>
-        </footer>
+          <Route
+            path="/book"
+            element={<BookAppointment />}
+          />
+
+          <Route
+            path="/appointments"
+            element={<MyAppointments />}
+          />
+
+          <Route path="/edit-appointment/:id" 
+          element={<EditAppointment />} />
+        </Routes>
       </div>
-    </BrowserRouter>
+
+      <Footer />
+    </>
   );
 }
+
+export default App;

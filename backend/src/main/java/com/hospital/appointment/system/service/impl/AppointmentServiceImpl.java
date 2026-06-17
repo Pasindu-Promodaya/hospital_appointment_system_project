@@ -115,7 +115,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         return AppointmentResponse.builder()
                 .id(appointment.getId())
                 .doctorId(appointment.getDoctor().getId())
+                .doctorName(appointment.getDoctor().getName())
                 .patientId(appointment.getPatient().getId())
+                .patientName(appointment.getPatient().getName())
                 .appointmentDate(appointment.getAppointmentDate())
                 .appointmentTime(appointment.getAppointmentTime())
                 .status(appointment.getStatus())
@@ -141,12 +143,13 @@ public class AppointmentServiceImpl implements AppointmentService {
         Patient patient = patientRepository.findById(request.getPatientId())
                 .orElseThrow(() -> new RuntimeException("Patient not found"));
 
-        // Check slot availability (avoid double booking)
+        // Check slot availability (avoid double booking), excluding this appointment itself
         boolean alreadyBooked = appointmentRepository
-                .existsByDoctor_IdAndAppointmentDateAndAppointmentTime(
+                .existsByDoctor_IdAndAppointmentDateAndAppointmentTimeAndIdNot(
                         request.getDoctorId(),
                         request.getAppointmentDate(),
-                        request.getAppointmentTime()
+                        request.getAppointmentTime(),
+                        id
                 );
 
         if (alreadyBooked) {

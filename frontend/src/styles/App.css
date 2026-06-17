@@ -1,0 +1,787 @@
+/* ============================================
+   RESET & BASE STYLES
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background: #f4f8fb;
+  color: #333;
+}
+
+/* ============================================
+   CONTAINER
+   ============================================ */
+
+.container {
+  width: 90%;
+  max-width: 1200px;
+  margin: auto;
+  padding: 30px 0;
+  min-height: 80vh;
+}
+
+/* ============================================
+   NAVBAR
+   ============================================ */
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 40px;
+  background: #1565c0;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.navbar h2 {
+  font-size: 24px;
+}
+
+.navbar div {
+  display: flex;
+  gap: 25px;
+}
+
+.navbar a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.navbar a:hover {
+  color: #ffd54f;
+}
+
+/* ============================================
+   HOME PAGE
+   ============================================ */
+
+.home {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.home h1 {
+  font-size: 42px;
+  color: #1565c0;
+  margin-bottom: 20px;
+}
+
+.home p {
+  font-size: 18px;
+  margin-bottom: 35px;
+}
+
+.home-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* ============================================
+   FORMS (Base)
+   ============================================ */
+
+.form {
+  max-width: 500px;
+  margin: auto;
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.form input {
+  width: 100%;
+  padding: 12px;
+  margin: 12px 0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.form input:focus {
+  outline: none;
+  border-color: #1565c0;
+}
+
+/* ============================================
+   BUTTONS (Base)
+   ============================================ */
+
+button {
+  background: #1565c0;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #0d47a1;
+}
+
+.cancel {
+  background: #d32f2f;
+}
+
+.cancel:hover {
+  background: #b71c1c;
+}
+
+/* ============================================
+   CARDS (Base - for home page)
+   ============================================ */
+
+.card {
+  background: white;
+  padding: 25px;
+  margin: 20px auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transition: 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+}
+
+.card h3 {
+  color: #1565c0;
+  margin-bottom: 15px;
+}
+
+.card p {
+  margin: 8px 0;
+}
+
+.buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+
+.footer {
+  background: #1565c0;
+  color: white;
+  text-align: center;
+  padding: 18px;
+  margin-top: 40px;
+}
+
+/* ============================================
+   LOADING
+   ============================================ */
+
+.loading {
+  text-align: center;
+  padding: 80px;
+  font-size: 22px;
+  font-weight: bold;
+  color: #1565c0;
+}
+
+/* ============================================
+   ALERT COMPONENT
+   ============================================ */
+
+.alert-container {
+  margin-bottom: 20px;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  color: #155724;
+  padding: 12px 20px;
+  border-radius: 6px;
+  position: relative;
+}
+
+.alert-error {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  color: #721c24;
+  padding: 12px 20px;
+  border-radius: 6px;
+  position: relative;
+}
+
+.alert-close {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+  padding: 0 8px;
+}
+
+.alert-close:hover {
+  background: none;
+  opacity: 1;
+}
+
+/* ============================================
+   MY APPOINTMENTS PAGE
+   ============================================ */
+
+.appointments-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.appointments-heading {
+  font-size: 28px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 25px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid #3498db;
+}
+
+.appointments-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 25px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.btn-toggle-cancelled {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  color: white;
+}
+
+.btn-toggle-cancelled.active {
+  background-color: #dc3545;
+}
+
+.btn-toggle-cancelled.active:hover {
+  background-color: #c82333;
+}
+
+.btn-toggle-cancelled.inactive {
+  background-color: #6c757d;
+}
+
+.btn-toggle-cancelled.inactive:hover {
+  background-color: #5a6268;
+}
+
+.cancelled-count-badge {
+  padding: 8px 16px;
+  background-color: #e9ecef;
+  border-radius: 6px;
+  color: #495057;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.btn-restore-all {
+  padding: 8px 20px;
+  background-color: #17a2b8;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.btn-restore-all:hover {
+  background-color: #138496;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+  font-size: 18px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 2px dashed #dee2e6;
+}
+
+/* ============================================
+   APPOINTMENT CARD
+   ============================================ */
+
+.appointment-card {
+  border: 1px solid #dee2e6;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  background-color: #ffffff;
+}
+
+.appointment-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.appointment-card.cancelled {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+}
+
+.appointment-detail {
+  display: flex;
+  padding: 4px 0;
+  font-size: 15px;
+}
+
+.appointment-detail strong {
+  min-width: 140px;
+  color: #495057;
+  font-weight: 600;
+}
+
+.status-badge {
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.status-badge.active {
+  color: #28a745;
+  background-color: #d4edda;
+}
+
+.status-badge.cancelled {
+  color: #dc3545;
+  background-color: #f8d7da;
+}
+
+.appointment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e9ecef;
+}
+
+/* ============================================
+   ACTION BUTTONS
+   ============================================ */
+
+.btn-edit {
+  padding: 6px 18px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.btn-edit:hover {
+  background-color: #0069d9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.btn-cancel {
+  padding: 6px 18px;
+  background-color: #ffc107;
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+  background-color: #e0a800;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+}
+
+.btn-remove-view {
+  padding: 6px 18px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.btn-remove-view:hover {
+  background-color: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-edit:disabled,
+.btn-cancel:disabled,
+.btn-remove-view:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ============================================
+   BOOK APPOINTMENT PAGE
+   ============================================ */
+
+.book-appointment-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.book-appointment-heading {
+  font-size: 28px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 25px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid #28a745;
+}
+
+.book-appointment-form {
+  background-color: #f8f9fa;
+  padding: 25px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.btn-book {
+  flex: 1;
+  padding: 12px 24px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.btn-book:hover {
+  background-color: #218838;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.btn-book:active {
+  transform: translateY(0);
+}
+
+/* ============================================
+   EDIT APPOINTMENT PAGE
+   ============================================ */
+
+.edit-appointment-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.edit-appointment-heading {
+  font-size: 28px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 25px;
+  padding-bottom: 10px;
+  border-bottom: 3px solid #3498db;
+}
+
+.edit-appointment-form {
+  background-color: #f8f9fa;
+  padding: 25px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+/* ============================================
+   FORM ELEMENTS (Shared)
+   ============================================ */
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 15px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+}
+
+.form-input:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #e9ecef;
+}
+
+.btn-update {
+  flex: 1;
+  padding: 12px 24px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.btn-update:hover {
+  background-color: #218838;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.btn-cancel-form {
+  flex: 0.5;
+  padding: 12px 24px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel-form:hover {
+  background-color: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+/* ============================================
+   FORM HELPER TEXT
+   ============================================ */
+
+.form-helper {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #6c757d;
+  font-style: italic;
+  padding: 4px 8px;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+  font-size: 16px;
+}
+
+.loading-spinner::after {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-left: 10px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    gap: 15px;
+    padding: 20px;
+  }
+
+  .navbar div {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .home h1 {
+    font-size: 30px;
+  }
+
+  .home-buttons {
+    flex-direction: column;
+  }
+
+  .form {
+    width: 100%;
+  }
+
+  .buttons {
+    flex-direction: column;
+  }
+
+  .appointments-heading {
+    font-size: 22px;
+  }
+
+  .appointments-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .appointment-detail {
+    flex-direction: column;
+    padding: 3px 0;
+  }
+
+  .appointment-detail strong {
+    min-width: auto;
+  }
+
+  .appointment-actions {
+    flex-direction: column;
+  }
+
+  .btn-cancel,
+  .btn-remove-view,
+  .btn-toggle-cancelled,
+  .btn-restore-all,
+  .btn-edit {
+    width: 100%;
+    text-align: center;
+    padding: 10px;
+  }
+
+  .cancelled-count-badge {
+    text-align: center;
+  }
+
+  /* Book & Edit Pages */
+  .book-appointment-container,
+  .edit-appointment-container {
+    padding: 15px;
+  }
+
+  .book-appointment-heading,
+  .edit-appointment-heading {
+    font-size: 22px;
+  }
+
+  .book-appointment-form,
+  .edit-appointment-form {
+    padding: 18px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn-update,
+  .btn-cancel-form,
+  .btn-book {
+    width: 100%;
+    flex: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .appointments-container,
+  .book-appointment-container,
+  .edit-appointment-container {
+    padding: 10px;
+  }
+
+  .appointments-heading,
+  .book-appointment-heading,
+  .edit-appointment-heading {
+    font-size: 20px;
+  }
+
+  .appointment-card,
+  .book-appointment-form,
+  .edit-appointment-form {
+    padding: 14px;
+  }
+
+  .form-input {
+    font-size: 14px;
+    padding: 8px 12px;
+  }
+}

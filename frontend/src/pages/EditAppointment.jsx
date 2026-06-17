@@ -1,15 +1,20 @@
-// src/pages/BookAppointment.jsx
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { createAppointment } from "../services/appointmentService";
-import { getAllDoctors } from "../services/doctorService";
-import { getAllPatients } from "../services/patientService";
+// src/pages/EditAppointment.jsx
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  getAppointment,
+  updateAppointment,
+} from "../services/appointmentService";
+import { getAllDoctors } from "../services/doctorService"; // ✅ ADDED
+import { getAllPatients } from "../services/patientService"; // ✅ ADDED
 import Alert from '../components/Alert';
-import '../styles/App.css'; // ✅ IMPORT CSS
+import '../styles/App.css';
 
-function BookAppointment() {
+function EditAppointment() {
+  const { id } = useParams();
   const navigate = useNavigate();
 
+  // ✅ ADDED: State for doctors and patients lists
   const [doctors, setDoctors] = useState([]);
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,23 +33,25 @@ function BookAppointment() {
     loadData();
   }, []);
 
-  // ✅ CHANGED: Load doctors and patients together with loading state
+  // ✅ CHANGED: Load appointment, doctors, and patients together
   const loadData = async () => {
     try {
       setLoading(true);
       
-      // Load both in parallel
-      const [doctorsRes, patientsRes] = await Promise.all([
+      // Load all data in parallel
+      const [appointmentRes, doctorsRes, patientsRes] = await Promise.all([
+        getAppointment(id),
         getAllDoctors(),
         getAllPatients()
       ]);
 
+      setForm(appointmentRes.data);
       setDoctors(doctorsRes.data);
       setPatients(patientsRes.data);
       
     } catch (err) {
       console.error("Failed to load data:", err);
-      setAlertMsg("Failed to load doctors and patients. Please refresh the page.");
+      setAlertMsg("Failed to load appointment details. Please try again.");
       setAlertType("error");
     } finally {
       setLoading(false);
@@ -62,7 +69,7 @@ function BookAppointment() {
     e.preventDefault();
 
     try {
-      await createAppointment({
+      await updateAppointment(id, {
         doctorId: Number(form.doctorId),
         patientId: Number(form.patientId),
         appointmentDate: form.appointmentDate,
@@ -71,18 +78,18 @@ function BookAppointment() {
 
       navigate("/appointments", {
         state: {
-          alertMsg: "Appointment Booked Successfully",
+          alertMsg: "Appointment Updated Successfully",
           alertType: "success",
         },
       });
 
     } catch (err) {
-      console.error(err);
+      console.error("Update failed:", err);
 
-      const errorMessage = 
+      const errorMessage =
         err.response?.data?.message ||
-        "Booking Failed. Please try again.";
-      
+        "Failed to update appointment. Please try again.";
+
       setAlertMsg(errorMessage);
       setAlertType("error");
     }
@@ -94,16 +101,16 @@ function BookAppointment() {
 
   if (loading) {
     return (
-      <div className="book-appointment-container">
-        <h2 className="book-appointment-heading">Book Appointment</h2>
-        <div className="loading-spinner">Loading doctors and patients...</div>
+      <div className="edit-appointment-container">
+        <h2 className="edit-appointment-heading">Edit Appointment</h2>
+        <div className="loading-spinner">Loading appointment details...</div>
       </div>
     );
   }
 
   return (
-    <div className="book-appointment-container">
-      <h2 className="book-appointment-heading">Book Appointment</h2>
+    <div className="edit-appointment-container">
+      <h2 className="edit-appointment-heading">Edit Appointment</h2>
 
       <Alert
         type={alertType}
@@ -111,8 +118,8 @@ function BookAppointment() {
         onClose={() => setAlertMsg(null)}
       />
 
-      <form className="book-appointment-form" onSubmit={handleSubmit}>
-        {/* Doctor dropdown */}
+      <form className="edit-appointment-form" onSubmit={handleSubmit}>
+        {/* ✅ CHANGED: Doctor dropdown instead of input */}
         <div className="form-group">
           <label htmlFor="doctorId">Doctor</label>
           <select
@@ -137,7 +144,7 @@ function BookAppointment() {
           )}
         </div>
 
-        {/* Patient dropdown */}
+        {/* ✅ CHANGED: Patient dropdown instead of input */}
         <div className="form-group">
           <label htmlFor="patientId">Patient</label>
           <select
@@ -162,7 +169,6 @@ function BookAppointment() {
           )}
         </div>
 
-        {/* Appointment Date */}
         <div className="form-group">
           <label htmlFor="appointmentDate">Appointment Date</label>
           <input
@@ -176,7 +182,6 @@ function BookAppointment() {
           />
         </div>
 
-        {/* Appointment Time */}
         <div className="form-group">
           <label htmlFor="appointmentTime">Appointment Time</label>
           <input
@@ -191,8 +196,8 @@ function BookAppointment() {
         </div>
 
         <div className="form-actions">
-          <button type="submit" className="btn-book">
-            Book Appointment
+          <button type="submit" className="btn-update">
+            Update Appointment
           </button>
           <button 
             type="button" 
@@ -207,4 +212,4 @@ function BookAppointment() {
   );
 }
 
-export default BookAppointment;
+export default EditAppointment;
