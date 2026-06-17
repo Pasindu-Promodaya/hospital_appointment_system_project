@@ -3,9 +3,11 @@ package com.hospital.appointment.system.controller;
 import com.hospital.appointment.system.dto.AppointmentRequest;
 import com.hospital.appointment.system.dto.AppointmentResponse;
 import com.hospital.appointment.system.service.AppointmentService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,7 +22,6 @@ public class AppointmentController {
 
     // Book an appointment
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
     public AppointmentResponse bookAppointment(
             @Valid @RequestBody AppointmentRequest request) {
 
@@ -30,13 +31,14 @@ public class AppointmentController {
     // Get all appointments
     @GetMapping
     public List<AppointmentResponse> getAllAppointments() {
+
         return appointmentService.getAllAppointments();
     }
 
     // Get appointment by ID
     @GetMapping("/{id}")
     public AppointmentResponse getAppointmentById(
-            @PathVariable Long id) {
+            @Valid @PathVariable Long id) {
 
         return appointmentService.getAppointmentById(id);
     }
@@ -44,7 +46,7 @@ public class AppointmentController {
     // Get appointments by doctor
     @GetMapping("/doctor/{doctorId}")
     public List<AppointmentResponse> getAppointmentsByDoctor(
-            @PathVariable Long doctorId) {
+            @Valid @PathVariable Long doctorId) {
 
         return appointmentService.getAppointmentsByDoctor(doctorId);
     }
@@ -52,17 +54,24 @@ public class AppointmentController {
     // Get appointments by patient
     @GetMapping("/patient/{patientId}")
     public List<AppointmentResponse> getAppointmentsByPatient(
-            @PathVariable Long patientId) {
+            @Valid @PathVariable Long patientId) {
 
         return appointmentService.getAppointmentsByPatient(patientId);
     }
 
     // Cancel appointment
-    @PutMapping("/{id}/cancel")
+    @PatchMapping("/{id}/cancel")
     public AppointmentResponse cancelAppointment(
-            @PathVariable Long id) {
+            @Valid @PathVariable Long id) {
 
         return appointmentService.cancelAppointment(id);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<AppointmentResponse> updateAppointment(
+        @Valid @PathVariable Long id,
+        @Valid @RequestBody AppointmentRequest request) {
+
+    return ResponseEntity.ok(appointmentService.updateAppointment(id, request));
+    }
 }

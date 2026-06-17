@@ -11,17 +11,14 @@ import java.util.List;
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
-    // Check whether a doctor is already booked for a specific date and time
-    boolean existsByDoctorIdAndAppointmentDateAndAppointmentTime(
+    boolean existsByDoctor_IdAndAppointmentDateAndAppointmentTime(
             Long doctorId,
             LocalDate appointmentDate,
             LocalTime appointmentTime
     );
 
-    // Get appointments of a doctor
-    List<Appointment> findByDoctorId(Long doctorId);
+    List<Appointment> findByDoctor_Id(Long doctorId);
 
-    // Get appointments of a patient
-    List<Appointment> findByPatientId(Long patientId);
+    List<Appointment> findByPatient_Id(Long patientId);
 
 }

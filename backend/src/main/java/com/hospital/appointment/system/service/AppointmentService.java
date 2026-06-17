@@ -18,4 +18,6 @@ public interface AppointmentService {
     List<AppointmentResponse> getAppointmentsByPatient(Long patientId);
 
     AppointmentResponse cancelAppointment(Long id);
+
+    AppointmentResponse updateAppointment(Long id, AppointmentRequest request);
 }

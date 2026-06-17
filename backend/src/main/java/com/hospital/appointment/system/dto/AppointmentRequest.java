@@ -1,13 +1,17 @@
 package com.hospital.appointment.system.dto;
 
-import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import jakarta.validation.constraints.FutureOrPresent;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class AppointmentRequest {
 
     @NotNull(message = "Doctor ID is required")
@@ -17,7 +21,7 @@ public class AppointmentRequest {
     private Long patientId;
 
     @NotNull(message = "Appointment date is required")
-    @FutureOrPresent(message = "Appointment date cannot be in the past")
+    @FutureOrPresent(message = "Appointment date must be today or in the future")
     private LocalDate appointmentDate;
 
     @NotNull(message = "Appointment time is required")
