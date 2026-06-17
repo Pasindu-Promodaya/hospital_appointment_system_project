@@ -31,4 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Environment variables / sensitive config
 .env
+*.env
+application.properties
+!application-default.properties
