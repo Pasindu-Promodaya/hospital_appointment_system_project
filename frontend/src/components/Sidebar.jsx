@@ -2,7 +2,9 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 
 const Sidebar = () => {
-  const menuItems = [
+ const menuItems = [
+    // 🌟 Linked your exact routing target node path matching App.jsx
+    { path: '/doctor/dashboard', label: '👨‍⚕️ Doctor Portal (Mine)', color: '#0284c7' },
     { path: '/doctors', label: '⚕️ Doctors Directory (M1)', color: '#38bdf8' },
     { path: '/booking', label: '📅 Book Appointments (M2)', color: '#4ade80' },
     { path: '/profile', label: '🩺 Patient Records (M3)', color: '#f472b6' },
@@ -12,15 +14,18 @@ const Sidebar = () => {
 
   return (
     <nav style={{
-      width: 'var(--sidebar-width)',
+      width: '280px', // Fallback explicit size or var(--sidebar-width)
       backgroundColor: 'white',
-      borderRight: '1px solid var(--border-color)',
+      borderRight: '1px solid #e2e8f0',
       padding: '24px 16px',
       display: 'flex',
       flexDirection: 'column',
       gap: '8px',
-      height: 'calc(100vh - 60px)',
-      boxSizing: 'border-box'
+      height: '100vh', // Sets full layout matching height
+      position: 'sticky',
+      top: 0,
+      boxSizing: 'border-box',
+      flexShrink: 0 // Prevents the sidebar component from compressing horizontally
     }}>
       <div style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', paddingLeft: '16px', marginBottom: '8px', textTransform: 'uppercase' }}>
         Modules
@@ -34,8 +39,8 @@ const Sidebar = () => {
             padding: '12px 16px',
             borderRadius: '8px',
             textDecoration: 'none',
-            color: isActive ? 'white' : 'var(--text-main)',
-            backgroundColor: isActive ? 'var(--primary-blue)' : 'transparent',
+            color: isActive ? 'white' : '#475569',
+            backgroundColor: isActive ? '#2563eb' : 'transparent',
             fontWeight: isActive ? '600' : '500',
             fontSize: '14px',
             display: 'flex',
