@@ -5,6 +5,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -18,7 +20,7 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable()) // Disables CSRF tokens for local testing
             
-            // 🌟 FIX: Tells Spring Security to look at and honor your WebMvcConfigurer CORS bean below!
+            // 🌐 Tells Spring Security to look at and honor your WebMvcConfigurer CORS bean below!
             .cors(Customizer.withDefaults()) 
             
             .authorizeHttpRequests(auth -> auth
@@ -42,5 +44,11 @@ public class SecurityConfig {
                         .allowCredentials(true);
             }
         };
+    }
+
+    // 🔐 ADD THIS: Provides the system with the required engine to decode your database password hashes!
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }

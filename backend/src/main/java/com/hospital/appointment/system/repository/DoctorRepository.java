@@ -7,11 +7,10 @@ import java.util.List;
 
 @Repository
 public interface DoctorRepository extends JpaRepository<Doctor, Long> {
-    //Auto genarates select all from where specalization and is active
 
-    List<Doctor> findBySpecializationAndIsActiveTrue(String specialization);
+    // 🌟 Uses ContainingIgnoreCase to make the search case-insensitive and safe against spacing bugs
+    List<Doctor> findBySpecializationContainingIgnoreCaseAndIsActiveTrue(String specialization);
 
-    //Auto genarates Select all from where is active
-
+    // Automatically generates: SELECT * FROM doctors WHERE is_active = 1
     List<Doctor> findByIsActiveTrue();
 }

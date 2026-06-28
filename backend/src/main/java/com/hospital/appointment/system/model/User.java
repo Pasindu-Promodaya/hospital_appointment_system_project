@@ -1,5 +1,6 @@
 package com.hospital.appointment.system.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 @Entity
@@ -24,8 +25,9 @@ public class User {
      * This ensures that when you log in as a Doctor, your user account knows exactly 
      * which Doctor ID belongs to you so your dashboard can load your specific queue.
      */
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "doctor_id", nullable = true)
+    
+    @OneToOne(fetch = FetchType.LAZY, mappedBy = "user")
+    @JsonBackReference
     private Doctor doctor;
 
     // --- Constructors ---

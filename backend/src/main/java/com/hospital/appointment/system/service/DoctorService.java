@@ -25,12 +25,14 @@ public class DoctorService {
         return doctorRepository.save(doctor);
     }
 
-    // 2. Logic to fetch active practitioners filtered by department specialty
+    // 2. Logic to fetch active practitioners filtered safely by department specialty
     public List<Doctor> getDoctorsBySpecialty(String specialty) {
-        if (specialty == null || specialty.isEmpty()) {
+        // 🎯 If specialty is empty, null, or explicitly "All", return all active practitioners
+        if (specialty == null || specialty.isEmpty() || specialty.equalsIgnoreCase("All")) {
             return doctorRepository.findByIsActiveTrue();
         }
-        return doctorRepository.findBySpecializationAndIsActiveTrue(specialty);
+        // Passes the parameter straight to the robust case-insensitive query handler
+        return doctorRepository.findBySpecializationContainingIgnoreCaseAndIsActiveTrue(specialty);
     }
 
     // 3. Logic to save a new weekly shift roster entry

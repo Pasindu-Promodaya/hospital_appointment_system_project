@@ -2,6 +2,7 @@ package com.hospital.appointment.system.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
 @Table(name = "doctors")
@@ -13,6 +14,7 @@ public class Doctor {
 
     // ⛓️ The critical One-to-One inheritance link to the core User table
     @OneToOne(fetch = FetchType.LAZY)
+    @JsonManagedReference
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
