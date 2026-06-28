@@ -1,4 +1,4 @@
-package com.hospital.appoointment.system.repository;
+package com.hospital.appointment.system.repository;
 
 import com.hospital.appointment.system.model.DoctorSchedule;
 import org.springframework.data.jpa.repository.JpaRepository;

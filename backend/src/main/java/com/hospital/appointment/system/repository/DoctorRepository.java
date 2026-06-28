@@ -1,9 +1,9 @@
-package com.hospital.appoointment.system.repository;
+package com.hospital.appointment.system.repository;
 
-import com.hospital.appoointment.system.model.Doctor;
+import com.hospital.appointment.system.model.Doctor;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-import java.utill.List;
+import java.util.List;
 
 @Repository
 public interface DoctorRepository extends JpaRepository<Doctor, Long> {
