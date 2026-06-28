@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
 
@@ -29,30 +30,25 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-        // 1. Check availability using EMAIL
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             return ResponseEntity.badRequest().body("Email is already registered!");
         }
 
-        // 2. Create User account credentials
         User user = new User();
-        user.setEmail(request.getEmail()); 
-        user.setPasswordHash(passwordEncoder.encode(request.getPassword())); 
-        
-        // --- FIX: Explicitly set the role so it is not NULL ---
-        user.setRole("PATIENT"); 
-        
-        User savedUser = userRepository.save(user); // 'created_at' is handled automatically by the Model
+        user.setEmail(request.getEmail());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setRole("PATIENT");
 
-        // 3. Create Patient contact profile
+        User savedUser = userRepository.save(user);
+
         Patient patient = new Patient();
-        patient.setUserId(savedUser.getId()); 
+        patient.setUserId(savedUser.getId());
         patient.setFirstName(request.getFirstName());
         patient.setLastName(request.getLastName());
-        patient.setEmail(request.getEmail()); 
-        patient.setDateOfBirth(request.getDateOfBirth());
-        patient.setPhone(request.getPhone()); 
-        
+        patient.setEmail(request.getEmail());
+        patient.setDateOfBirth(LocalDate.parse(request.getDateOfBirth()));
+        patient.setPhone(request.getPhone());
+
         patientRepository.save(patient);
 
         return ResponseEntity.ok("Registration successful!");
@@ -63,10 +59,8 @@ public class AuthController {
         String email = credentials.get("email");
         String password = credentials.get("password");
 
-        // 1. Authenticate via EMAIL
         Optional<User> userOpt = userRepository.findByEmail(email);
-        
-        // 2. Verify hashed password
+
         if (userOpt.isPresent() && passwordEncoder.matches(password, userOpt.get().getPasswordHash())) {
             Optional<Patient> patientOpt = patientRepository.findByUserId(userOpt.get().getId());
             return ResponseEntity.ok(patientOpt.orElse(null));
