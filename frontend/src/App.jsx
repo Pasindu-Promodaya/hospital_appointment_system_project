@@ -8,20 +8,20 @@ import AdminDashboard from './pages/AdminDashboard';   // Member 4
 import Notifications from './pages/Notifications';     // Member 5
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        {/* The Master Frame encapsulates all paths underneath it */}
-        <Route path="/" element={<Layout />}>
-          <Route path="doctors" element={<DoctorDirectory />} />
-          <Route path="booking" element={<BookingPage />} />
-          <Route path="profile" element={<PatientProfile />} />
-          <Route path="admin" element={<AdminDashboard />} />
-          <Route path="notifications" element={<Notifications />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  );
+    return (
+        <BrowserRouter>
+            <Routes>
+                {/* The Master Frame encapsulates all paths underneath it */}
+                <Route path="/" element={<Layout />}>
+                    <Route path="doctors" element={<DoctorDirectory />} />
+                    <Route path="booking" element={<BookingPage />} />
+                    <Route path="profile" element={<PatientProfile />} />
+                    <Route path="admin" element={<AdminDashboard />} />
+                    <Route path="notifications" element={<Notifications />} />
+                </Route>
+            </Routes>
+        </BrowserRouter>
+    );
 }
 
 export default App;
