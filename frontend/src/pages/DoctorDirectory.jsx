@@ -1,148 +1,229 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // 🌟 Import navigate hooks
+import { useAuth } from '../context/AuthContext';   // 🌟 Import your authentication framework check
 
-const DoctorDirectory = () => {
-  // 💡 Mock Data: This represents what your backend controller will send to this page later!
-  const [doctors, setDoctors] = useState([
-    { id: 1, name: "Dr. Sanduni Perera", specialization: "Cardiology", licenseNumber: "MC-98432", isActive: true },
-    { id: 2, name: "Dr. Himal Samarawickrama", specialization: "Neurology", licenseNumber: "MC-12743", isActive: true },
-    { id: 3, name: "Dr. Kanishka Silva", specialization: "Pediatrics", licenseNumber: "MC-45321", isActive: true }
-  ]);
+export default function DoctorDirectory() {
+  const [doctors, setDoctors] = useState([]);
+  const [specialty, setSpecialty] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const [searchSpecialty, setSearchSpecialty] = useState("");
+  const navigate = useNavigate(); // 🧭 Initialize redirection engine
+  const { user } = useAuth();     // 🔑 Read active login state metrics
+
+  const specialties = ['All', 'Cardiology', 'Neurology', 'Pediatrics', 'Dermatology', 'General Medicine'];
+
+  useEffect(() => {
+    setLoading(true);
+    const url = specialty && specialty !== 'All' 
+      ? `http://localhost:8080/api/doctors?specialty=${specialty}`
+      : 'http://localhost:8080/api/doctors';
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        setDoctors(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Error fetching clinical directory:", err);
+        setLoading(false);
+      });
+  }, [specialty]);
+
+  // 🌟 INTERACTIVE ROUTING ROUTINE: Evaluates session context roles
+  const handleBookingClick = (doc) => {
+    const userRole = user?.role || localStorage.getItem('role');
+
+    if (userRole === 'ROLE_PATIENT' || userRole === 'PATIENT') {
+      // ✅ Authenticated as patient -> Skip onboarding, launch booking form view
+      navigate('/booking', { state: { doctorId: doc.id } });
+    } else {
+      // 🔐 Unauthenticated / Non-patient -> Forward to the dedicated onboarding split page
+      navigate('/patient-auth', { 
+        state: { 
+          redirectTo: '/booking', 
+          doctorId: doc.id 
+        } 
+      });
+    }
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      
-      {/* 1. Header & Summary Section */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h2 style={{ margin: '0 0 4px 0', color: 'var(--primary-dark)', fontSize: '24px', fontWeight: '700' }}>
-            Medical Practitioners Directory
-          </h2>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
-            Manage active hospital doctors, review medical licenses, and monitor channel schedules.
-          </p>
-        </div>
-        <button style={{
-          backgroundColor: 'var(--primary-blue)',
-          color: 'white',
-          border: 'none',
-          padding: '10px 18px',
-          borderRadius: '8px',
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#f8fafc',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      color: '#1e293b'
+    }}>
+      {/* Premium Hero Banner Segment */}
+      <div style={{
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)',
+        color: 'white',
+        padding: '64px 24px',
+        textAlign: 'center',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+      }}>
+        <span style={{
+          backgroundColor: 'rgba(56, 189, 248, 0.2)',
+          color: '#38bdf8',
+          padding: '6px 16px',
+          borderRadius: '20px',
+          fontSize: '13px',
           fontWeight: '600',
-          cursor: 'pointer',
-          boxShadow: '0 2px 4px rgba(2, 132, 199, 0.2)'
+          letterSpacing: '0.5px'
         }}>
-          ➕ Add New Practitioner
-        </button>
+          ✨ CORE HEALTH HEALTHCARE GATEWAY
+        </span>
+        <h1 style={{ fontSize: '36px', fontWeight: '800', margin: '16px 0 8px 0', letterSpacing: '-0.5px' }}>
+          Find & Book World-Class Specialists
+        </h1>
+        <p style={{ color: '#94a3b8', fontSize: '16px', maxWidth: '600px', margin: '0 auto' }}>
+          Access real-time schedules, verified clinical licenses, and instantaneous booking channels.
+        </p>
       </div>
 
-      {/* 2. Advanced Filter Toolbar */}
-      <div style={{
-        backgroundColor: 'white',
-        padding: '16px 24px',
-        borderRadius: '12px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        display: 'flex',
-        gap: '16px',
-        alignItems: 'center'
-      }}>
-        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-main)' }}>🔍 Search Specialty:</span>
-        <input 
-          type="text" 
-          placeholder="e.g., Cardiology, Neurology..." 
-          value={searchSpecialty}
-          onChange={(e) => setSearchSpecialty(e.target.value)}
-          style={{
-            flex: 1,
-            padding: '10px 14px',
-            borderRadius: '8px',
-            border: '1px solid var(--border-color)',
-            fontSize: '14px',
-            outline: 'none'
-          }}
-        />
-      </div>
-
-      {/* 3. Dynamic Interactive Grid Board */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-        gap: '20px'
-      }}>
-        {doctors
-          .filter(doc => doc.specialization.toLowerCase().includes(searchSpecialty.toLowerCase()))
-          .map((doctor) => (
-            <div 
-              key={doctor.id} 
+      {/* Main Layout Container */}
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 24px' }}>
+        
+        {/* Interactive Filter Pill Container */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          gap: '12px', 
+          flexWrap: 'wrap',
+          marginBottom: '40px' 
+        }}>
+          {specialties.map((spec) => (
+            <button
+              key={spec}
+              onClick={() => setSpecialty(spec === 'All' ? '' : spec)}
               style={{
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-                padding: '20px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                position: 'relative'
+                padding: '10px 24px',
+                borderRadius: '30px',
+                border: '1px solid',
+                borderColor: (specialty === spec || (spec === 'All' && !specialty)) ? '#2563eb' : '#e2e8f0',
+                backgroundColor: (specialty === spec || (spec === 'All' && !specialty)) ? '#2563eb' : 'white',
+                color: (specialty === spec || (spec === 'All' && !specialty)) ? 'white' : '#475569',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
               }}
             >
-              {/* Active Duty Green Badge */}
-              <span style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                backgroundColor: '#f0fdf4',
-                color: '#16a34a',
-                fontSize: '12px',
-                fontWeight: '600',
-                padding: '4px 8px',
-                borderRadius: '6px'
-              }}>
-                ● Active Duty
-              </span>
+              {spec}
+            </button>
+          ))}
+        </div>
 
-              <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContents: 'center', fontSize: '24px' }}>
-                👨‍⚕️
-              </div>
+        {/* Dynamic Display Grid */}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#64748b', fontSize: '16px' }}>
+            🔄 Syncing medical database entries...
+          </div>
+        ) : doctors.length === 0 ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '48px', 
+            backgroundColor: 'white', 
+            borderRadius: '16px', 
+            border: '1px solid #e2e8f0',
+            color: '#64748b'
+          }}>
+            🍃 No clinical profiles currently listed under this discipline.
+          </div>
+        ) : (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gap: '24px'
+          }}>
+            {doctors.map((doc) => (
+              <div 
+                key={doc.id}
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  border: '1px solid #e2e8f0',
+                  padding: '24px',
+                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.01), 0 2px 4px -1px rgba(0,0,0,0.01)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  transition: 'transform 0.2s',
+                  cursor: 'pointer'
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
+                    <div style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '12px',
+                      backgroundColor: '#eff6ff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '22px'
+                    }}>
+                      👨‍⚕️
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>
+                        {doc.name}
+                      </h3>
+                      <span style={{
+                        display: 'inline-block',
+                        backgroundColor: '#f1f5f9',
+                        color: '#475569',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        marginTop: '4px'
+                      }}>
+                        {doc.specialization}
+                      </span>
+                    </div>
+                  </div>
 
-              <div>
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '18px', color: 'var(--primary-dark)' }}>{doctor.name}</h4>
-                <span style={{ 
-                  backgroundColor: '#f1f5f9', 
-                  color: '#475569', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  padding: '4px 8px', 
-                  borderRadius: '6px' 
-                }}>
-                  {doctor.specialization}
-                </span>
-              </div>
+                  <hr style={{ border: 0, borderTop: '1px solid #f1f5f9', margin: '16px 0' }} />
 
-              <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '8px 0' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748b' }}>
+                      📋 <strong style={{ color: '#334155' }}>License:</strong> {doc.licenseNumber || doc.license_number}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748b' }}>
+                      ✉️ <strong style={{ color: '#334155' }}>Contact:</strong> {doc.email}
+                    </div>
+                  </div>
+                </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#64748b' }}>
-                <span>📜 License: <strong>{doctor.licenseNumber}</strong></span>
-                <button style={{
-                  backgroundColor: 'transparent',
-                  color: 'var(--primary-blue)',
-                  border: '1px solid var(--primary-blue)',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  fontSize: '12px'
-                }}>
-                  View Slots
+                {/* 🌟 Event Link Injection Point */}
+                <button 
+                  onClick={() => handleBookingClick(doc)}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    backgroundColor: '#0f172a',
+                    color: 'white',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    marginTop: 'auto',
+                    transition: 'background-color 0.2s'
+                  }}
+                >
+                  Book Consultation Slot
                 </button>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
       </div>
-
     </div>
   );
-};
-
-export default DoctorDirectory;
+}
