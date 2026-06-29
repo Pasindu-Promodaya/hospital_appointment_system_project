@@ -1,6 +1,5 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Navbar from './components/Navbar';
 import Layout from './components/Layout';
 import DoctorDirectory from './pages/DoctorDirectory';
 import BookingPage from './pages/BookingPage';
@@ -13,7 +12,7 @@ import MedicalDashboard from "./pages/MedicalDashboard";
 function App() {
     return (
         <BrowserRouter>
-            <Navbar />
+            {/* Removed standalone navbar from here to stop the double header bug */}
             <Routes>
                 <Route path="/" element={<Layout />}>
                     <Route index element={<MyProfile />} />

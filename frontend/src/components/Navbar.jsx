@@ -1,37 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
-    // 🌟 Extract the validated user session details
-    const { user, logout } = useAuth();
+    const [userRole, setUserRole] = useState(null);
 
-    // 🔍 Synchronized session evaluator
-    const userRole = user?.role || localStorage.getItem('role');
+    // Watch for login storage state updates
+    useEffect(() => {
+        const checkAuth = () => {
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                const parsedUser = JSON.parse(storedUser);
+                setUserRole(parsedUser.role || null);
+            } else {
+                setUserRole(null);
+            }
+        };
 
+        checkAuth();
+
+        window.addEventListener('storage', checkAuth);
+        return () => window.removeEventListener('storage', checkAuth);
+    }, []);
+
+    const handleLogout = () => {
+        localStorage.removeItem('user');
+        window.location.href = '/doctors';
+    };
+
+    // The items list array
     const allMenuItems = [
         { path: '/doctor-dashboard', label: '👨‍⚕️ Doctor Portal', role: 'ROLE_DOCTOR', color: '#0284c7' },
         { path: '/doctors', label: '⚕️ Doctors Directory', role: 'PUBLIC', color: '#38bdf8' },
         { path: '/booking', label: '📅 Book Appointments', role: 'PUBLIC', color: '#4ade80' },
+        { path: '/admin', label: '📊 Admin Dashboard', role: 'PUBLIC', color: '#fbbf24' }, // Changed role to PUBLIC so it sits right next to booking
         { path: '/profile', label: '🩺 Patient Records', role: 'ROLE_MEMBER3', color: '#f472b6' },
-        { path: '/admin', label: '📊 Staff Roster', role: 'ROLE_ADMIN', color: '#fbbf24' },
         { path: '/notifications', label: '🔔 Channel Alerts', role: 'ROLE_MEMBER5', color: '#a78bfa' },
-        { path: '/dashboard', label: '🏥 Medical Dashboard', role: 'ROLE_MEMBER3', color: '#10b981' } // Added your dashboard route seamlessly
+        { path: '/dashboard', label: '🏥 Medical Dashboard', role: 'ROLE_MEMBER3', color: '#10b981' }
     ];
 
-    // 🌟 DYNAMIC FILTER ENGINE: Rules-based visibility matrix
+    // Filter routing lists based on roles
     const visibleMenuItems = allMenuItems.filter(item => {
         if (!userRole) {
-            // 👥 Scenario A: Public Guest -> Show only public exploratory entries
             return item.role === 'PUBLIC';
         } else if (userRole === 'ROLE_DOCTOR' || userRole === 'DOCTOR') {
-            // 👨‍⚕️ Scenario B: Authorized Doctor -> View private management deck exclusively
             return item.role === 'ROLE_DOCTOR';
         } else if (userRole === 'ROLE_ADMIN' || userRole === 'ADMIN') {
-            // 📊 Scenario C: Hospital Administrator -> View workspace panel exclusively
-            return item.role === 'ROLE_ADMIN';
-        } else if (userRole === 'ROLE_PATIENT' || userRole === 'PATIENT') {
-            // 🩺 Scenario D: Authenticated Patient -> Keep public channels active + append historical charts
+            // Admin can see admin things as well as public links
+            return item.role === 'ROLE_ADMIN' || item.role === 'PUBLIC';
+        } else if (userRole === 'ROLE_PATIENT' || userRole === 'PATIENT' || userRole === 'ROLE_MEMBER3') {
             return item.role === 'PUBLIC' || item.role === 'ROLE_MEMBER3';
         }
         return false;
@@ -48,7 +64,7 @@ const Navbar = () => {
             boxSizing: 'border-box',
             fontFamily: 'system-ui, sans-serif'
         }}>
-            {/* Upper Utility segment */}
+            {/* Top info subheader strip */}
             <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -60,24 +76,21 @@ const Navbar = () => {
                 backgroundColor: '#f8fafc'
             }}>
                 <div style={{ display: 'flex', gap: '24px', fontWeight: '600' }}>
-          <span style={{ color: '#2563eb', borderBottom: '2px solid #2563eb', paddingBottom: '8px' }}>
-            {userRole ? `${userRole.replace('ROLE_', '')} Workspace` : 'Public Gateway'}
-          </span>
+                    <span style={{ color: '#2563eb', borderBottom: '2px solid #2563eb', paddingBottom: '8px' }}>
+                        {userRole ? `${userRole.replace('ROLE_', '')} Workspace` : 'Public Gateway'}
+                    </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     {userRole ? (
                         <button
-                            onClick={() => {
-                                logout();
-                                window.location.href = '/doctors'; // Clean flush redirection target
-                            }}
+                            onClick={handleLogout}
                             style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: '600', cursor: 'pointer' }}
                         >
                             Sign Out 🚪
                         </button>
                     ) : (
                         <button
-                            onClick={() => window.location.href = '/login'}
+                            onClick={() => window.location.href = '/admin'}
                             style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '600', cursor: 'pointer' }}
                         >
                             Staff Login 🔐
@@ -86,7 +99,7 @@ const Navbar = () => {
                 </div>
             </div>
 
-            {/* Main Bar Navigation */}
+            {/* Main navigation row */}
             <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -95,10 +108,9 @@ const Navbar = () => {
                 height: '70px'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', fontSize: '20px', color: '#0f172a' }}>
-                    <span style={{ fontSize: '24px' }}>🏥</span> CoreHealth
+                    <span style={{ fontSize: '24px' }}>🏥</span> CareFlow
                 </div>
 
-                {/* Dynamic Links stack */}
                 <nav style={{ display: 'flex', alignItems: 'center', gap: '4px', height: '100%' }}>
                     {visibleMenuItems.map((item) => (
                         <NavLink

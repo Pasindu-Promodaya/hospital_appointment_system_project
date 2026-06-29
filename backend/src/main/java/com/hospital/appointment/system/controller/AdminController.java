@@ -8,9 +8,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "http://localhost:5173")
+// added allowCredentials configuration to match security policy standards
+@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class AdminController {
 
     @Autowired
@@ -26,5 +29,13 @@ public class AdminController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(e.getMessage());
         }
+    }
+
+    // export registered practitioner details straight into dropdown components
+    @GetMapping("/doctors")
+    public ResponseEntity<List<Doctor>> getAllRegisteredDoctors() {
+        // execute service array query call
+        List<Doctor> activeDoctorsList = doctorService.getAllDoctors();
+        return ResponseEntity.ok(activeDoctorsList);
     }
 }

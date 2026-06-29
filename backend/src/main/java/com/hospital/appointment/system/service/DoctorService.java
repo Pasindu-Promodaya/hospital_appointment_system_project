@@ -10,6 +10,8 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class DoctorService {
 
@@ -27,15 +29,15 @@ public class DoctorService {
             throw new RuntimeException("Error: Email is already registered in the system!");
         }
 
-        //user login
+        // define structural credentials user credentials link
         User user = new User();
         user.setEmail(dto.getEmail());
         user.setPasswordHash(dto.getPassword());
         user.setRole(UserRole.DOCTOR);
 
-        // create the doctor detailed profile linke to user account
+        // create the doctor detailed profile linked to user account
         Doctor doctor = new Doctor();
-        doctor.setUser(user); // Map the 1:1 relationship
+        doctor.setUser(user); // map the 1:1 relationship context block
         doctor.setFirstName(dto.getFirstName());
         doctor.setLastName(dto.getLastName());
         doctor.setName(dto.getFirstName() + " " + dto.getLastName());
@@ -48,5 +50,10 @@ public class DoctorService {
 
         // save to database
         return doctorRepository.save(doctor);
+    }
+
+    // fetch all registered doctors from the repository dataset block
+    public List<Doctor> getAllDoctors() {
+        return doctorRepository.findAll();
     }
 }
