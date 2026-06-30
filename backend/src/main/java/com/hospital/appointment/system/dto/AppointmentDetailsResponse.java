@@ -14,8 +14,8 @@ public class AppointmentDetailsResponse {
     private String status;
     private String medicalProblem;
 
-    public AppointmentDetailsResponse(Long id, Long doctorId, String doctorName, String specialization,
-                                      LocalDate appointmentDate, String timeSlot, int tokenNumber,
+    public AppointmentDetailsResponse(Long id, Long doctorId, String doctorName, String specialization, 
+                                      LocalDate appointmentDate, String timeSlot, int tokenNumber, 
                                       int queueOrder, String status, String medicalProblem) {
         this.id = id;
         this.doctorId = doctorId;
@@ -29,7 +29,7 @@ public class AppointmentDetailsResponse {
         this.medicalProblem = medicalProblem;
     }
 
-    // Getters.
+    // Getters
     public Long getId() { return id; }
     public Long getDoctorId() { return doctorId; }
     public String getDoctorName() { return doctorName; }

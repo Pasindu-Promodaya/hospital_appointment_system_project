@@ -1,29 +1,24 @@
 package com.hospital.appointment.system.dto;
 
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.FutureOrPresent;
-import lombok.*;
-
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class AppointmentRequest {
-
-    @NotNull(message = "Doctor ID is required")
     private Long doctorId;
-
-    @NotNull(message = "Patient ID is required")
-    private Long patientId;
-
-    @NotNull(message = "Appointment date is required")
-    @FutureOrPresent(message = "Appointment date must be today or in the future")
     private LocalDate appointmentDate;
+    private LocalTime timeSlot;
+    private String medicalProblem;
 
-    @NotNull(message = "Appointment time is required")
-    private LocalTime appointmentTime;
+    // Getters and Setters
+    public Long getDoctorId() { return doctorId; }
+    public void setDoctorId(Long doctorId) { this.doctorId = doctorId; }
+
+    public LocalDate getAppointmentDate() { return appointmentDate; }
+    public void setAppointmentDate(LocalDate appointmentDate) { this.appointmentDate = appointmentDate; }
+
+    public LocalTime getTimeSlot() { return timeSlot; }
+    public void setTimeSlot(LocalTime timeSlot) { this.timeSlot = timeSlot; }
+
+    public String getMedicalProblem() { return medicalProblem; }
+    public void setMedicalProblem(String medicalProblem) { this.medicalProblem = medicalProblem; }
 }

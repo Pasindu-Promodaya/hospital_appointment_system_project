@@ -7,7 +7,7 @@ public class RescheduleRequest {
     private LocalDate newDate;
     private LocalTime newTimeSlot;
 
-    // Getters and setters.
+    // Getters and Setters
     public LocalDate getNewDate() { return newDate; }
     public void setNewDate(LocalDate newDate) { this.newDate = newDate; }
 

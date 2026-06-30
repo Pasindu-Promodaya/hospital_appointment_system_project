@@ -1,77 +1,71 @@
 package com.hospital.appointment.system.controller;
 
-import com.hospital.appointment.system.dto.AppointmentRequest;
-import com.hospital.appointment.system.dto.AppointmentResponse;
+import com.hospital.appointment.system.model.Appointment;
 import com.hospital.appointment.system.service.AppointmentService;
-
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-
+import com.hospital.appointment.system.dto.AppointmentRequest;
+import com.hospital.appointment.system.dto.DoctorResponse;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/appointments")
-@RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*")
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
 
-    // Book an appointment
-    @PostMapping
-    public AppointmentResponse bookAppointment(
-            @Valid @RequestBody AppointmentRequest request) {
-
-        return appointmentService.bookAppointment(request);
+    public AppointmentController(AppointmentService appointmentService) {
+        this.appointmentService = appointmentService;
     }
 
-    // Get all appointments
-    @GetMapping
-    public List<AppointmentResponse> getAllAppointments() {
+    @GetMapping("/my-appointments")
+    public ResponseEntity<List<com.hospital.appointment.system.dto.AppointmentDetailsResponse>> getMyAppointments(
+            @RequestHeader("X-Patient-Id") Long patientId) {
+        return ResponseEntity.ok(appointmentService.getAppointmentsByPatient(patientId));
+}
 
-        return appointmentService.getAllAppointments();
+    @GetMapping("/specializations")
+    public ResponseEntity<List<String>> getSpecializations() {
+        return ResponseEntity.ok(appointmentService.getAllSpecializations());
     }
 
-    // Get appointment by ID
-    @GetMapping("/{id}")
-    public AppointmentResponse getAppointmentById(
-            @Valid @PathVariable Long id) {
-
-        return appointmentService.getAppointmentById(id);
+    @GetMapping("/doctors")
+    public ResponseEntity<List<DoctorResponse>> getDoctors(@RequestParam String specialization) {
+        return ResponseEntity.ok(appointmentService.getDoctorsBySpecialization(specialization));
     }
 
-    // Get appointments by doctor
-    @GetMapping("/doctor/{doctorId}")
-    public List<AppointmentResponse> getAppointmentsByDoctor(
-            @Valid @PathVariable Long doctorId) {
-
-        return appointmentService.getAppointmentsByDoctor(doctorId);
+    @GetMapping("/available-slots")
+    public ResponseEntity<List<LocalTime>> getAvailableSlots(
+            @RequestParam Long doctorId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(appointmentService.getAvailableTimeSlots(doctorId, date));
     }
 
-    // Get appointments by patient
-    @GetMapping("/patient/{patientId}")
-    public List<AppointmentResponse> getAppointmentsByPatient(
-            @Valid @PathVariable Long patientId) {
-
-        return appointmentService.getAppointmentsByPatient(patientId);
+    @PostMapping("/book")
+    public ResponseEntity<Appointment> book(
+            @RequestHeader(value = "X-Patient-Id", defaultValue = "1") Long patientId, 
+            @RequestBody AppointmentRequest request) {
+        return ResponseEntity.ok(appointmentService.bookAppointment(patientId, request));
     }
 
-    // Cancel appointment
-    @PatchMapping("/{id}/cancel")
-    public AppointmentResponse cancelAppointment(
-            @Valid @PathVariable Long id) {
-
-        return appointmentService.cancelAppointment(id);
+    @PutMapping("/{id}/reschedule")
+    public ResponseEntity<Appointment> reschedule(
+            @PathVariable Long id,
+            @RequestHeader("X-Patient-Id") Long patientId,
+            @RequestBody com.hospital.appointment.system.dto.RescheduleRequest request) {
+        return ResponseEntity.ok(appointmentService.rescheduleAppointment(id, patientId, request));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<AppointmentResponse> updateAppointment(
-        @Valid @PathVariable Long id,
-        @Valid @RequestBody AppointmentRequest request) {
-
-    return ResponseEntity.ok(appointmentService.updateAppointment(id, request));
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelAppointment(
+            @PathVariable("id") Long id,
+            @RequestHeader("X-Patient-Id") Long patientId) {
+        appointmentService.cancelAppointment(id, patientId);
+        return ResponseEntity.ok().build();
     }
 }
