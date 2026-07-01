@@ -127,7 +127,7 @@ export default function BookAppointment({ patientId }) {
       medicalProblem: medicalProblem.trim() || null,
     };
 
-    try {
+  try {
       const response = await fetch(`${API_BASE_URL}/appointments/book`, {
         method: 'POST',
         headers: {
@@ -159,11 +159,11 @@ export default function BookAppointment({ patientId }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <div className="rounded-3xl border border-slate-200 bg-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.4)] overflow-hidden">
+    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.4)]">
         <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-blue-700 px-6 py-8 sm:px-8">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md">
               <svg className="h-7 w-7 text-blue-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M12 21s8-4.35 8-10a4 4 0 0 0-7-2.2A4 4 0 0 0 4 11c0 5.65 8 10 8 10Z" />
                 <path d="M12 13a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" />
