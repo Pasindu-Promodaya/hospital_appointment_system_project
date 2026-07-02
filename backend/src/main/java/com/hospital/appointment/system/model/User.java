@@ -2,6 +2,8 @@ package com.hospital.appointment.system.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "users")
@@ -11,21 +13,26 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
-    private String password; // Holds the secure BCrypt hashed string
+    // 🎯 INTEGRATED: Uses your teammate's column name 'password_hash' but keeps your variable name 'password' 
+    // to prevent breaking your code elsewhere in the application layer!
+    @Column(name = "password_hash", nullable = false)
+    private String password; 
 
     @Column(nullable = false)
-    private String role; // Standard Values: ROLE_PATIENT, ROLE_DOCTOR, ROLE_ADMIN
+    private String role; // Holds descriptive tag strings (e.g., ROLE_PATIENT, ROLE_DOCTOR)
+
+    // 🧑‍💻 TEAMMATE'S PROPERTY: Automatically sets tracking timestamps upon database insert rows
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
     /**
-     * Optional One-to-One mapping linking directly to the doctor profile table.
-     * This ensures that when you log in as a Doctor, your user account knows exactly 
-     * which Doctor ID belongs to you so your dashboard can load your specific queue.
+     * ⛓️ YOUR DOCTOR GRAPH: Optional Bidirectional One-to-One mapping linking down to the doctor metadata table.
+     * Jackson loop-protection is preserved via @JsonBackReference.
      */
-    
     @OneToOne(fetch = FetchType.LAZY, mappedBy = "user")
     @JsonBackReference
     private Doctor doctor;
@@ -35,7 +42,7 @@ public class User {
     // 💡 Empty constructor required by Hibernate Reflection API
     public User() {}
 
-    // 🧑‍💻 Parameterized constructor for clean programmatic registrations
+    // 🧑‍💻 Parameterized constructor for registration flows
     public User(String email, String password, String role, Doctor doctor) {
         this.email = email;
         this.password = password;
@@ -51,11 +58,19 @@ public class User {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
+    // Unified helper syntax mapping to prevent breaking your project files
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
 
+    // Teammate aliased getter/setter support hooks to ensure patient profiles match perfectly
+    public String getPasswordHash() { return password; }
+    public void setPasswordHash(String passwordHash) { this.password = passwordHash; }
+
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public Doctor getDoctor() { return doctor; }
     public void setDoctor(Doctor doctor) { this.doctor = doctor; }
