@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -60,52 +60,36 @@ export default function Login() {
   };
 
   return (
-    <div style={{
-      minHeight: '85vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      backgroundColor: '#f8fafc'
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '420px',
-        backgroundColor: '#ffffff',
-        padding: '40px',
-        borderRadius: '16px',
-        border: '1px solid #e2e8f0',
-        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05)'
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '40px', marginBottom: '12px' }}>🏥</div>
-          <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px 0' }}>
+    <div className="min-h-[85vh] flex items-center justify-center font-sans bg-slate-50 relative">
+      
+      {/* 🌟 Patient Login Gateway Trigger (Positioned at the absolute top right corner of the outer viewport) */}
+      <button 
+        onClick={() => navigate('/patient-auth')}
+        className="absolute top-6 right-6 px-[18px] py-2 bg-white hover:bg-slate-100 border border-slate-200 shadow-sm rounded-lg text-slate-800 font-semibold text-xs cursor-pointer transition-all duration-200 hover:-translate-y-0.5 flex items-center gap-1.5"
+      >
+        👤 Patient Login
+      </button>
+
+      <div className="w-full max-w-[420px] bg-white p-10 rounded-2xl border border-slate-200 shadow-sm shadow-black/[0.05]">
+        <div className="text-center mb-8">
+          <div className="text-4xl mb-3">🏥</div>
+          <h2 className="text-2xl font-extrabold text-slate-900 m-0 mb-2">
             Provider Gateway
           </h2>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
+          <p className="m-0 text-slate-500 text-sm">
             Access clinical management nodes and rosters
           </p>
         </div>
 
         {error && (
-          <div style={{
-            backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca',
-            color: '#dc2626',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            fontSize: '13px',
-            fontWeight: '500',
-            marginBottom: '24px',
-            lineHeight: '1.5'
-          }}>
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-xs font-medium mb-6 leading-relaxed">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-slate-600">
               Corporate Email Address
             </label>
             <input
@@ -114,21 +98,12 @@ export default function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="e.g., doctor@corehealth.com"
-              style={{
-                padding: '12px 16px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '14px',
-                color: '#0f172a',
-                outline: 'none',
-                boxSizing: 'border-box',
-                width: '100%'
-              }}
+              className="px-4 py-3 rounded-lg border border-slate-300 text-sm text-slate-900 outline-none w-full box-border focus:border-blue-500"
             />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-slate-600">
               Secret Access Token
             </label>
             <input
@@ -137,36 +112,18 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              style={{
-                padding: '12px 16px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '14px',
-                color: '#0f172a',
-                outline: 'none',
-                boxSizing: 'border-box',
-                width: '100%'
-              }}
+              className="px-4 py-3 rounded-lg border border-slate-300 text-sm text-slate-900 outline-none w-full box-border focus:border-blue-500"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '14px',
-              backgroundColor: loading ? '#94a3b8' : '#0f172a',
-              color: '#ffffff',
-              fontWeight: '700',
-              fontSize: '14px',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 6px -1px rgba(15, 23, 42, 0.1)',
-              transition: 'background-color 0.2s',
-              marginTop: '10px'
-            }}
+            className={`w-full py-3.5 text-white font-bold text-sm border-none rounded-lg mt-2.5 transition-colors duration-200 shadow-sm shadow-slate-900/10 ${
+              loading 
+                ? 'bg-slate-400 cursor-not-allowed' 
+                : 'bg-slate-900 hover:bg-slate-800 cursor-pointer'
+            }`}
           >
             {loading ? 'Authenticating Credentials...' : 'Access Workspace'}
           </button>

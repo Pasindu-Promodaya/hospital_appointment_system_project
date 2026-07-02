@@ -4,6 +4,7 @@ import com.hospital.appointment.system.dto.AuthResponse;
 import com.hospital.appointment.system.dto.LoginRequest;
 import com.hospital.appointment.system.model.User;
 import com.hospital.appointment.system.repository.UserRepository;
+import com.hospital.appointment.system.security.JwtTokenProvider; // 🌟 IMPORT THIS
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +22,10 @@ public class AuthController {
     private UserRepository userRepository;
 
     @Autowired
-    private PasswordEncoder passwordEncoder; // 🔐 Injected your configured BCrypt engine
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider; // 🌟 INJECT THIS BEAN
 
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest) {
@@ -41,15 +45,15 @@ public class AuthController {
                     .body("❌ Access Denied: Invalid password key.");
         }
 
-        // 3. Simulated token session string execution
-        String fallbackToken = "SIMULATED_JWT_TOKEN_FOR_" + user.getEmail().toUpperCase();
+        // 🎯 3. FIX: Generate a real, cryptographically signed token signed with your static secret key!
+        String realJwtToken = jwtTokenProvider.generateToken(user.getEmail(), user.getRole());
 
         // 4. Extract linked doctor ID property safely if present
         Long linkedDoctorId = (user.getDoctor() != null) ? user.getDoctor().getId() : null;
 
         // 5. Build and return the clean data transfer object back to your React app
         return ResponseEntity.ok(new AuthResponse(
-                fallbackToken, 
+                realJwtToken, 
                 user.getEmail(), 
                 user.getRole(), 
                 linkedDoctorId

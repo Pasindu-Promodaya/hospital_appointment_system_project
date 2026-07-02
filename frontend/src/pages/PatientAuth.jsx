@@ -22,7 +22,7 @@ export default function PatientAuth() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    Loading(true);
 
     // Dynamic configuration matching target action loop
     const endpoint = isLogin 
@@ -66,31 +66,16 @@ export default function PatientAuth() {
   };
 
   return (
-    <div style={{
-      minHeight: '80vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#f8fafc',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '400px',
-        backgroundColor: '#ffffff',
-        padding: '40px',
-        borderRadius: '16px',
-        border: '1px solid #e2e8f0',
-        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)'
-      }}>
+    <div className="min-h-[80vh] flex items-center justify-center bg-slate-50 font-sans">
+      <div className="w-full max-w-[400px] bg-white p-10 rounded-2xl border border-slate-200 shadow-sm">
         
         {/* Decorative branding wrapper header */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '36px', marginBottom: '12px' }}>🩹</div>
-          <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px 0' }}>
+        <div className="text-center mb-8">
+          <div className="text-4xl mb-3">🩹</div>
+          <h2 className="text-2xl font-extrabold text-slate-950 m-0 mb-1.5">
             {isLogin ? 'Patient Login Portal' : 'Patient Registration'}
           </h2>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '14px', lineHeight: '1.4' }}>
+          <p className="m-0 text-slate-500 text-smSub text-sm leading-relaxed">
             {isLogin 
               ? 'Sign in to access your clinical scheduling view' 
               : 'Create a localized profile to finalize your session registration'}
@@ -99,129 +84,75 @@ export default function PatientAuth() {
 
         {/* Error Notification Block */}
         {error && (
-          <div style={{
-            backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca',
-            color: '#dc2626',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            fontSize: '13px',
-            fontWeight: '500',
-            marginBottom: '24px',
-            lineHeight: '1.5'
-          }}>
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-xs font-medium mb-6 leading-relaxed">
             {error}
           </div>
         )}
 
         {/* Main Interface Action Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           
           {/* Conditional Input Rendering logic node */}
           {!isLogin && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Full Legal Name</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-slate-600">Full Legal Name</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., Jane Doe"
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '14px',
-                  color: '#0f172a',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  width: '100%'
-                }}
+                className="px-4 py-3 rounded-lg border border-slate-300 text-sm text-slate-900 outline-none w-full box-border focus:border-blue-500"
               />
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Email Address</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-slate-600">Email Address</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@domain.com"
-              style={{
-                padding: '12px 16px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '14px',
-                color: '#0f172a',
-                outline: 'none',
-                boxSizing: 'border-box',
-                width: '100%'
-              }}
+              className="px-4 py-3 rounded-lg border border-slate-300 text-sm text-slate-900 outline-none w-full box-border focus:border-blue-500"
             />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>Secure Password</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-slate-600">Secure Password</label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              style={{
-                padding: '12px 16px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '14px',
-                color: '#0f172a',
-                outline: 'none',
-                boxSizing: 'border-box',
-                width: '100%'
-              }}
+              className="px-4 py-3 rounded-lg border border-slate-300 text-sm text-slate-900 outline-none w-full box-border focus:border-blue-500"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '14px',
-              backgroundColor: loading ? '#94a3b8' : '#2563eb',
-              color: '#ffffff',
-              fontWeight: '700',
-              fontSize: '14px',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2)',
-              marginTop: '8px',
-              transition: 'background-color 0.15s ease'
-            }}
+            className={`w-fullDoc w-full py-3.5 text-white font-bold text-sm border-none rounded-lg mt-2 transition-colors duration-150 shadow-sm shadow-blue-600/20 ${
+              loading 
+                ? 'bg-slate-400 cursor-not-allowed' 
+                : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
+            }`}
           >
             {loading ? 'Processing Workspace Token...' : isLogin ? 'Sign In & Process Appointment' : 'Create Account & Continue'}
           </button>
         </form>
 
         {/* Sliding View Toggle Option Router */}
-        <div style={{ textAlign: 'center', marginTop: '28px', fontSize: '13px' }}>
-          <span style={{ color: '#64748b' }}>
+        <div className="text-center mt-7 text-xs">
+          <span className="text-slate-500">
             {isLogin ? "First time using CoreHealth services? " : "Have a digital health record already? "}
           </span>
           <button
             type="button"
             onClick={() => { setIsLogin(!isLogin); setError(''); }}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#2563eb',
-              fontWeight: '700',
-              cursor: 'pointer',
-              padding: '0 2px',
-              textDecoration: 'underline'
-            }}
+            className="bg-none border-none text-blue-600 font-bold cursor-pointer px-0.5 underline hover:text-blue-700"
           >
             {isLogin ? 'Register Account' : 'Sign In Directly'}
           </button>

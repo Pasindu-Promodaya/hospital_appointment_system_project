@@ -36,8 +36,9 @@ public class Doctor {
     @Column(name = "license_number", unique = true, nullable = false)
     private String licenseNumber;
 
+    // 🎯 FIXED: Changed primitive 'boolean' to 'Boolean' to cleanly accept incoming partial null parameters from JSON payloads
     @Column(name = "is_active", nullable = false)
-    private boolean isActive = true;
+    private Boolean isActive = true;
 
     @Column(name = "created_by_admin_id")
     private Long createdByAdminId;
@@ -48,8 +49,9 @@ public class Doctor {
     // --- Constructors ---
     public Doctor() {}
 
+    // 🎯 FIXED: Updated the argument signature to use boxed 'Boolean'
     public Doctor(User user, String firstName, String lastName, String email, String telephoneNumber, 
-                  String specialization, String licenseNumber, boolean isActive, Long createdByAdminId) {
+                  String specialization, String licenseNumber, Boolean isActive, Long createdByAdminId) {
         this.user = user;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -91,8 +93,9 @@ public class Doctor {
     public String getLicenseNumber() { return licenseNumber; }
     public void setLicenseNumber(String licenseNumber) { this.licenseNumber = licenseNumber; }
     
-    public boolean isActive() { return isActive; }
-    public void setActive(boolean isActive) { this.isActive = isActive; }
+    // 🎯 FIXED: Updated getter/setter configurations to match boxed properties
+    public Boolean getIsActive() { return isActive; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
 
     public Long getCreatedByAdminId() { return createdByAdminId; }
     public void setCreatedByAdminId(Long createdByAdminId) { this.createdByAdminId = createdByAdminId; }

@@ -10,12 +10,12 @@ const Navbar = () => {
   const userRole = user?.role || localStorage.getItem('role'); 
 
   const allMenuItems = [
-    { path: '/doctor-dashboard', label: '👨‍⚕️ Doctor Portal', role: 'ROLE_DOCTOR', color: '#0284c7' },
-    { path: '/doctors', label: '⚕️ Doctors Directory', role: 'PUBLIC', color: '#38bdf8' },
-    { path: '/booking', label: '📅 Book Appointments', role: 'PUBLIC', color: '#4ade80' },
-    { path: '/profile', label: '🩺 Patient Records', role: 'ROLE_MEMBER3', color: '#f472b6' },
-    { path: '/admin', label: '📊 Staff Roster', role: 'ROLE_ADMIN', color: '#fbbf24' },
-    { path: '/notifications', label: '🔔 Channel Alerts', role: 'ROLE_MEMBER5', color: '#a78bfa' }
+    { path: '/doctor-dashboard', label: '👨‍⚕️ Doctor Portal', role: 'ROLE_DOCTOR', borderClass: 'hover:border-sky-600 active:border-sky-600', activeColor: '#0284c7' },
+    { path: '/doctors', label: '⚕️ Doctors Directory', role: 'PUBLIC', borderClass: 'hover:border-sky-400 active:border-sky-400', activeColor: '#38bdf8' },
+    { path: '/booking', label: '📅 Book Appointments', role: 'PUBLIC', borderClass: 'hover:border-green-400 active:border-green-400', activeColor: '#4ade80' },
+    { path: '/profile', label: '🩺 Patient Records', role: 'ROLE_MEMBER3', borderClass: 'hover:border-pink-400 active:border-pink-400', activeColor: '#f472b6' },
+    { path: '/admin', label: '📊 Staff Roster', role: 'ROLE_ADMIN', borderClass: 'hover:border-amber-400 active:border-amber-400', activeColor: '#fbbf24' },
+    { path: '/notifications', label: '🔔 Channel Alerts', role: 'ROLE_MEMBER5', borderClass: 'hover:border-violet-400 active:border-violet-400', activeColor: '#a78bfa' }
   ];
 
   // 🌟 DYNAMIC FILTER ENGINE: Rules-based visibility matrix
@@ -37,47 +37,41 @@ const Navbar = () => {
   });
 
   return (
-    <header style={{
-      width: '100%',
-      backgroundColor: 'white',
-      borderBottom: '1px solid #e2e8f0',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-      boxSizing: 'border-box',
-      fontFamily: 'system-ui, sans-serif'
-    }}>
+    <header className="w-full bg-white border-b border-slate-200 sticky top-0 z-[100] box-border font-sans">
       {/* Upper Utility segment */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '8px 40px',
-        borderBottom: '1px solid #f1f5f9',
-        fontSize: '12px',
-        color: '#64748b',
-        backgroundColor: '#f8fafc'
-      }}>
-        <div style={{ display: 'flex', gap: '24px', fontWeight: '600' }}>
-          <span style={{ color: '#2563eb', borderBottom: '2px solid #2563eb', paddingBottom: '8px' }}>
+      <div className="flex justify-between items-center px-10 py-2 border-b border-slate-100 text-xs text-slate-500 bg-slate-50">
+        <div className="flex gap-6 font-semibold">
+          <span className="text-blue-600 border-b-2 border-blue-600 pb-2">
             {userRole ? `${userRole.replace('ROLE_', '')} Workspace` : 'Public Gateway'}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        
+        {/* 🛠️ Top-Right Controls Container */}
+        <div className="flex items-center gap-5">
+          {/* 🌟 Patient Login Button (Visible only when no active user session exists) */}
+          {!userRole && (
+            <button 
+              onClick={() => window.location.href = '/patient-auth'} // Redirects to patient login gateway
+              className="bg-none border-none text-emerald-600 font-bold cursor-pointer hover:text-emerald-700 transition-colors"
+            >
+              Patient Login 👤
+            </button>
+          )}
+
           {userRole ? (
             <button 
               onClick={() => {
                 logout();
                 window.location.href = '/doctors'; // Clean flush redirection target
               }}
-              style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: '600', cursor: 'pointer' }}
+              className="bg-none border-none text-rose-500 font-semibold cursor-pointer hover:text-rose-600 transition-colors"
             >
               Sign Out 🚪
             </button>
           ) : (
             <button 
               onClick={() => window.location.href = '/login'}
-              style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: '600', cursor: 'pointer' }}
+              className="bg-none border-none text-blue-600 font-semibold cursor-pointer hover:text-blue-700 transition-colors"
             >
               Staff Login 🔐
             </button>
@@ -86,36 +80,25 @@ const Navbar = () => {
       </div>
 
       {/* Main Bar Navigation */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 40px',
-        height: '70px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', fontSize: '20px', color: '#0f172a' }}>
-          <span style={{ fontSize: '24px' }}>🏥</span> CoreHealth
+      <div className="flex items-center justify-between px-10 h-[70px]">
+        <div className="flex items-center gap-2 font-extrabold text-xl text-slate-900">
+          <span className="text-2xl">🏥</span> CoreHealth
         </div>
 
         {/* Dynamic Links stack */}
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '4px', height: '100%' }}>
+        <nav className="flex items-center gap-1 h-full">
           {visibleMenuItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               style={({ isActive }) => ({
-                padding: '0 16px',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                textDecoration: 'none',
-                color: isActive ? '#0f172a' : '#475569',
-                fontWeight: isActive ? '700' : '500',
-                fontSize: '14px',
-                transition: 'all 0.15s ease',
-                borderBottom: isActive ? `4px solid ${item.color}` : '4px solid transparent',
-                boxSizing: 'border-box'
+                borderBottom: isActive ? `4px solid ${item.activeColor}` : '4px solid transparent',
               })}
+              className={({ isActive }) => 
+                `px-4 h-full flex items-center no-underline text-sm transition-all duration-150 ease-in-out box-border ${
+                  isActive ? 'text-slate-900 font-bold' : `text-slate-600 font-medium ${item.borderClass}`
+                }`
+              }
             >
               {item.label}
             </NavLink>
@@ -123,16 +106,7 @@ const Navbar = () => {
         </nav>
 
         <div>
-          <button style={{
-            backgroundColor: '#2563eb',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '6px',
-            fontWeight: '700',
-            fontSize: '13px',
-            cursor: 'pointer'
-          }}>
+          <button className="bg-blue-600 hover:bg-blue-700 text-white border-none px-5 py-2.5 rounded-md font-bold text-xs cursor-pointer transition-colors duration-150">
             EMERGENCY LINE
           </button>
         </div>

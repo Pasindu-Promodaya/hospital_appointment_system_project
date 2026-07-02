@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 
-const DOCTOR = {
-  id: 1, // Added ID for dynamic route fetching
+const STATIC_DOCTOR_FALLBACK = {
   name: 'Dr. Himal Samarawickrama',
   specialty: 'Neurology',
   reg: 'MC-12743',
@@ -9,10 +9,10 @@ const DOCTOR = {
 };
 
 const STATUS_STYLING = {
-  waiting: { label: 'Waiting', bg: '#f1f5f9', color: '#475569' },
-  serving: { label: 'In Room', bg: '#e0f2fe', color: 'var(--primary-blue, #0284c7)' },
-  done: { label: 'Done', bg: '#f0fdf4', color: '#16a34a' },
-  'no-show': { label: 'No-show', bg: '#fef2f2', color: '#ef4444' },
+  waiting: { label: 'Waiting', bg: 'bg-slate-100', color: 'text-slate-600' },
+  serving: { label: 'In Room', bg: 'bg-sky-100', color: 'text-sky-600' },
+  done: { label: 'Done', bg: 'bg-green-100', color: 'text-green-600' },
+  'no-show': { label: 'No-show', bg: 'bg-red-100', color: 'text-red-600' },
 };
 
 function initials(fullName) {
@@ -21,51 +21,66 @@ function initials(fullName) {
 }
 
 export default function DoctorDashboard() {
-  // Roster Form States
+  const { user } = useAuth();
+  const token = user?.token || localStorage.getItem('token');
+  
+  const activeDoctorId = user?.linkedDoctorId || user?.doctorId || 1;
+  const doctorDisplayName = user?.name || STATIC_DOCTOR_FALLBACK.name;
+
+  // Form States
   const [dayOfWeek, setDayOfWeek] = useState('Monday');
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('12:00');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Queue Management States
-  const [onDuty, setOnDuty] = useState(true);
-  const [queue, setQueue] = useState([]); // Dynamic empty initialization
+  // Queue States
+  const [queue, setQueue] = useState([]); 
   const [selectedId, setSelectedId] = useState(null);
   const [isLoadingQueue, setIsLoadingQueue] = useState(true);
 
-  // 📡 FETCH QUEUE DATA FROM BACKEND API
+  // 📡 FETCH QUEUE DATA FROM BACKEND
   const fetchTodayQueue = async () => {
+    const activeToken = token || localStorage.getItem('token');
+
+    if (!activeToken) {
+      setIsLoadingQueue(false);
+      return;
+    }
+
     setIsLoadingQueue(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/doctors/${DOCTOR.id}/queue`);
+      const response = await fetch(`http://localhost:8080/api/doctors/${activeDoctorId}/queue`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${activeToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setQueue(data);
-        // Automatically select the active patient if one exists
         const currentlyServing = data.find((p) => p.status === 'serving');
         if (currentlyServing) setSelectedId(currentlyServing.id);
       } else {
-        console.error('Failed to fetch the active queue sequence matrix.');
+        console.error('Failed to fetch queue stream. Status:', response.status);
       }
     } catch (error) {
-      console.error('Network database connection error:', error);
+      console.error('Database connection network error:', error);
     } finally {
       setIsLoadingQueue(false);
     }
   };
 
-  // Trigger data loader on dashboard frame initialization
   useEffect(() => {
     fetchTodayQueue();
-  }, []);
+  }, [token, activeDoctorId]);
 
-  // Memoized Metrics Calculations
   const serving = useMemo(() => queue.find((p) => p.status === 'serving'), [queue]);
   const waitingList = useMemo(() => queue.filter((p) => p.status === 'waiting'), [queue]);
   const seenToday = useMemo(() => queue.filter((p) => p.status === 'done').length, [queue]);
   const selectedPatient = queue.find((p) => p.id === selectedId) || serving;
 
-  // Full-Stack API Save Handler
+  // 📡 SAVE ROSTER SCHEDULING INTERVALS
   const handleSaveSchedule = async (e) => {
     e.preventDefault();
     if (isSaving) return;
@@ -75,8 +90,14 @@ export default function DoctorDashboard() {
       return;
     }
 
+    const activeToken = token || localStorage.getItem('token');
+    if (!activeToken) {
+      alert('❌ Authentication expired. Please log in again.');
+      return;
+    }
+
     const scheduleData = {
-      doctorId: DOCTOR.id, 
+      doctor: { id: activeDoctorId },
       dayOfWeek: dayOfWeek,
       startTime: startTime + ":00", 
       endTime: endTime + ":00",
@@ -87,313 +108,171 @@ export default function DoctorDashboard() {
     try {
       const response = await fetch('http://localhost:8080/api/doctors/schedules', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${activeToken}`
+        },
         body: JSON.stringify(scheduleData),
       });
 
       if (response.ok) {
-        alert(`🎯 Roster published! 15-minute slot allocations initialized for ${dayOfWeek}.`);
+        alert(`🎯 Roster published successfully for ${dayOfWeek}!`);
       } else {
-        alert('⚠️ Remote server rejected configuration. Check backend console outputs.');
+        alert('⚠️ Configuration rejected. Check backend terminal for parsing limits.');
       }
     } catch (error) {
-      console.error('Network handshake error:', error);
-      alert('❌ Cannot connect to backend server. Make sure Spring Boot is running!');
+      console.error('Handshake error:', error);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // 📢 CALL NEXT CONTROL METHOD WITH BACKEND API UPDATE
+  // 📢 CALL NEXT PATIENT
   async function handleCallNext() {
     const nextPatient = waitingList[0];
     if (!nextPatient) return;
-
+    const activeToken = token || localStorage.getItem('token');
     try {
-      // Sends updates upstream to update active room status logs inside MySQL
       const response = await fetch(`http://localhost:8080/api/appointments/${nextPatient.id}/next`, {
-        method: 'PUT'
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${activeToken}` }
       });
-      if (response.ok) {
-        fetchTodayQueue(); // Refresh tracking list directly from updated backend data source
-      }
+      if (response.ok) fetchTodayQueue(); 
     } catch (error) {
-      console.error("Queue progression transaction failed:", error);
+      console.error(error);
     }
   }
 
-  // ❌ NO-SHOW CONTROL METHOD WITH BACKEND API UPDATE
+  // ❌ REGISTER NO-SHOW 
   async function handleNoShow() {
     if (!serving) return;
-
+    const activeToken = token || localStorage.getItem('token');
     try {
       const response = await fetch(`http://localhost:8080/api/appointments/${serving.id}/no-show`, {
-        method: 'PUT'
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${activeToken}` }
       });
-      if (response.ok) {
-        fetchTodayQueue();
-      }
+      if (response.ok) fetchTodayQueue();
     } catch (error) {
-      console.error("Failed to flag patient cancellation instance:", error);
+      console.error(error);
     }
   }
 
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="flex flex-col gap-6">
       
       {/* Header Banner */}
-      <div style={{
-        backgroundColor: 'white',
-        padding: '24px',
-        borderRadius: '12px',
-        border: '1px solid #e2e8f0',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        display: 'flex',
-        justify: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '16px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: '#e0f2fe', display: 'flex', alignItems: 'center', justify: 'center', fontSize: '20px', fontWeight: '700', color: '#0284c7' }}>
-            {DOCTOR.initials}
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-sky-100 flex items-center justify-center text-xl font-bold text-sky-600">
+            {initials(doctorDisplayName)}
           </div>
           <div>
-            <h2 style={{ margin: '0 0 4px 0', color: '#1e293b', fontSize: '22px', fontWeight: '700' }}>
-              Welcome Back, {DOCTOR.name}
-            </h2>
-            <span style={{ backgroundColor: '#f1f5f9', color: '#475569', fontSize: '12px', fontWeight: '600', padding: '4px 8px', borderRadius: '6px' }}>
-              🔬 {DOCTOR.specialty} &middot; Registry: {DOCTOR.reg}
+            <h2 className="m-0 text-slate-800 text-22px font-bold">Welcome Back, {doctorDisplayName}</h2>
+            <span className="inline-block bg-slate-100 text-slate-600 text-xs font-semibold px-2 py-1 rounded-md mt-1">
+              🔬 {STATIC_DOCTOR_FALLBACK.specialty} &middot; Registry: {STATIC_DOCTOR_FALLBACK.reg} (ID: {activeDoctorId})
             </span>
           </div>
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <span style={{ fontSize: '14px', color: '#64748b', fontWeight: '500' }}>📆 {today}</span>
-          <button
-            type="button"
-            onClick={() => setOnDuty((v) => !v)}
-            style={{
-              backgroundColor: onDuty ? '#f0fdf4' : '#f1f5f9',
-              color: onDuty ? '#16a34a' : '#475569',
-              border: `1px solid ${onDuty ? '#16a34a' : '#cbd5e1'}`,
-              padding: '6px 12px',
-              borderRadius: '20px',
-              fontSize: '12px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <span style={{ color: onDuty ? '#16a34a' : '#94a3b8' }}>●</span> {onDuty ? 'On Duty' : 'Off Duty'}
-          </button>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-slate-500 font-medium">📆 {today}</span>
         </div>
       </div>
 
       {/* Main Top Grid Split */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* Roster Configuration Form Card */}
-        <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <h3 style={{ margin: '0 0 16px 0', color: '#1e293b', fontSize: '16px', fontWeight: '700' }}>
-            📅 Configure Weekly Work Roster
-          </h3>
-          <form onSubmit={handleSaveSchedule} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <h3 className="m-0 mb-4 text-slate-800 text-base font-bold">📅 Configure Weekly Work Roster</h3>
+          <form onSubmit={handleSaveSchedule} className="flex flex-col gap-4">
             <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#475569' }}>Select Operating Day:</label>
-              <select 
-                value={dayOfWeek} 
-                onChange={(e) => setDayOfWeek(e.target.value)} 
-                style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', backgroundColor: '#f8fafc' }}
-              >
-                <option>Monday</option>
-                <option>Tuesday</option>
-                <option>Wednesday</option>
-                <option>Thursday</option>
-                <option>Friday</option>
-                <option>Saturday</option>
-                <option>Sunday</option>
+              <label className="block mb-1.5 text-xs font-semibold text-slate-600">Select Operating Day:</label>
+              <select value={dayOfWeek} onChange={(e) => setDayOfWeek(e.target.value)} className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm outline-none bg-slate-50 text-slate-800 focus:border-blue-500">
+                <option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
               </select>
             </div>
-            <div style={{ display: 'flex', gap: '16px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#475569' }}>Start Shift:</label>
-                <input 
-                  type="time" 
-                  value={startTime} 
-                  onChange={(e) => setStartTime(e.target.value)} 
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', backgroundColor: '#f8fafc' }} 
-                />
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="block mb-1.5 text-xs font-semibold text-slate-600">Start Shift:</label>
+                <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm outline-none bg-slate-50 text-slate-800 focus:border-blue-500" />
               </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#475569' }}>End Shift:</label>
-                <input 
-                  type="time" 
-                  value={endTime} 
-                  onChange={(e) => setEndTime(e.target.value)} 
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', backgroundColor: '#f8fafc' }} 
-                />
+              <div className="flex-1">
+                <label className="block mb-1.5 text-xs font-semibold text-slate-600">End Shift:</label>
+                <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm outline-none bg-slate-50 text-slate-800 focus:border-blue-500" />
               </div>
             </div>
-            <button 
-              type="submit" 
-              disabled={isSaving}
-              style={{ 
-                backgroundColor: isSaving ? '#cbd5e1' : '#0284c7', 
-                color: 'white', 
-                border: 'none', 
-                padding: '12px', 
-                borderRadius: '8px', 
-                fontWeight: '600', 
-                fontSize: '14px',
-                cursor: isSaving ? 'not-allowed' : 'pointer', 
-                marginTop: '8px',
-                textAlign: 'center'
-              }}
-            >
-              {isSaving ? '⏳ Publishing Stream...' : 'Publish Active Roster'}
+            <button type="submit" disabled={isSaving} className={`w-full py-3 rounded-lg font-semibold text-sm mt-2 text-center transition-colors ${isSaving ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700 text-white cursor-pointer'}`}>
+              {isSaving ? '⏳ Publishing...' : 'Publish Active Roster'}
             </button>
           </form>
         </div>
 
-        {/* Live Operational Metrics */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-            <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>Waiting Now</div>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: '#1e293b' }}>{waitingList.length}</div>
+        {/* Live Operational Metrics Room */}
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div className="text-xs text-slate-400 font-semibold mb-1">Waiting Now</div>
+              <div className="text-2xl font-bold text-slate-800">{waitingList.length}</div>
             </div>
-            <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>Seen Today</div>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: '#16a34a' }}>{seenToday}</div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div className="text-xs text-slate-400 font-semibold mb-1">Seen Today</div>
+              <div className="text-2xl font-bold text-green-600">{seenToday}</div>
             </div>
-            <div style={{ backgroundColor: 'white', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>Now Serving</div>
-              <div style={{ fontSize: '20px', fontWeight: '700', fontFamily: 'monospace', color: '#0284c7' }}>
-                {serving ? serving.ticket : '—'}
-              </div>
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+              <div className="text-xs text-slate-400 font-semibold mb-1">Now Serving</div>
+              <div className="text-xl font-bold font-mono text-sky-600">{serving ? serving.ticket : '—'}</div>
             </div>
           </div>
 
-          {/* Active Patient Status Control Room */}
-          <div style={{ backgroundColor: '#1e293b', color: 'white', padding: '20px', borderRadius: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flex: 1 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px dashed #334155', paddingBottom: '10px', marginBottom: '10px' }}>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' }}>Current In-Room Token</span>
-              {serving && <span style={{ fontSize: '11px', backgroundColor: '#16a34a', color: 'white', padding: '2px 8px', borderRadius: '4px', fontWeight: '600' }}>● Live</span>}
+          <div className="bg-slate-800 text-white p-5 rounded-xl flex flex-col justify-between flex-1">
+            <div className="flex justify-between items-center border-b border-dashed border-slate-700 pb-2.5 mb-2.5">
+              <span className="text-[11px] font-bold text-slate-400 uppercase">Current In-Room Token</span>
+              {serving && <span className="text-[11px] bg-green-600 text-white px-2 py-0.5 rounded font-semibold animate-pulse">● Live</span>}
             </div>
-            
-            <div style={{ margin: '8px 0' }}>
+            <div className="my-2">
               {serving ? (
                 <>
-                  <div style={{ fontFamily: 'monospace', fontSize: '32px', fontWeight: '700', color: '#38bdf8', letterSpacing: '1px' }}>{serving.ticket}</div>
-                  <div style={{ fontSize: '16px', fontWeight: '600', marginTop: '4px' }}>{serving.name}</div>
-                  <div style={{ fontSize: '13px', color: '#94a3b8', marginTop: '2px' }}>⏱️ {serving.time} &middot; {serving.reason}</div>
+                  <div className="font-mono text-3xl font-bold text-sky-400 tracking-wider">{serving.ticket}</div>
+                  <div className="text-base font-semibold mt-1">{serving.name}</div>
+                  <div className="text-xs text-slate-400 mt-0.5">⏱️ {serving.time} &middot; {serving.reason}</div>
                 </>
               ) : (
-                <div style={{ fontSize: '14px', color: '#94a3b8' }}>No clinical patient currently initialized in treatment room.</div>
+                <div className="text-sm text-slate-400">No clinical patient in treatment room.</div>
               )}
             </div>
-
-            <div style={{ display: 'flex', gap: '12px', borderTop: '1px solid #334155', paddingTop: '12px', marginTop: '10px' }}>
-              <button
-                type="button"
-                onClick={handleCallNext}
-                disabled={!onDuty || waitingList.length === 0}
-                style={{
-                  flex: 1,
-                  backgroundColor: (!onDuty || waitingList.length === 0) ? '#334155' : '#16a34a',
-                  color: (!onDuty || waitingList.length === 0) ? '#64748b' : 'white',
-                  border: 'none',
-                  padding: '10px',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: (!onDuty || waitingList.length === 0) ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px'
-                }}
-              >
-                📢 Call Next
-              </button>
-              <button
-                type="button"
-                onClick={handleNoShow}
-                disabled={!serving}
-                style={{
-                  backgroundColor: 'transparent',
-                  color: !serving ? '#475569' : '#ef4444',
-                  border: `1px solid ${!serving ? '#334155' : '#ef4444'}`,
-                  padding: '10px 16px',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: !serving ? 'not-allowed' : 'pointer'
-                }}
-              >
-                ❌ No-Show
-              </button>
+            <div className="flex gap-3 border-t border-slate-700 pt-3 mt-2.5">
+              <button type="button" onClick={handleCallNext} disabled={waitingList.length === 0} className={`flex-1 py-2.5 rounded-md font-semibold text-xs border-none flex items-center justify-center gap-1.5 ${waitingList.length === 0 ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white cursor-pointer'}`}>📢 Call Next</button>
+              <button type="button" onClick={handleNoShow} disabled={!serving} className={`bg-transparent px-4 py-2.5 rounded-md font-semibold text-xs border ${!serving ? 'text-slate-600 border-slate-700 cursor-not-allowed' : 'text-red-500 border-red-500 hover:bg-red-500/10 cursor-pointer'}`}>❌ No-Show</button>
             </div>
           </div>
         </div>
-
       </div>
 
-      {/* Main Bottom Grid Split: Active Queue Stream List & Detailed Records Card */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '24px', alignItems: 'start' }}>
-        
-        {/* Active System Queue Registry */}
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-          <div style={{ padding: '14px 20px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#f8fafc' }}>
-            <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              📋 Active Operations Queue Streams
-            </span>
+      {/* Main Bottom Grid Split */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6 items-start">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">📋 Active Operations Queue Streams</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="flex flex-col">
             {isLoadingQueue ? (
-              <div style={{ padding: '24px', textCenter: 'center', color: '#94a3b8', fontSize: '14px', textAlign: 'center' }}>⏳ Synchronizing with live clinical data stream...</div>
+              <div className="py-6 text-slate-400 text-sm text-center">⏳ Synchronizing data stream...</div>
             ) : queue.length === 0 ? (
-              <div style={{ padding: '24px', textCenter: 'center', color: '#94a3b8', fontSize: '14px', textAlign: 'center' }}>No appointments booked for today.</div>
+              <div className="py-6 text-slate-400 text-sm text-center">No appointments booked today.</div>
             ) : (
               queue.map((patient) => {
                 const config = STATUS_STYLING[patient.status] || STATUS_STYLING.waiting;
-                const isSelected = patient.id === selectedId;
                 return (
-                  <button
-                    key={patient.id}
-                    type="button"
-                    onClick={() => setSelectedId(patient.id)}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '16px',
-                      padding: '14px 20px',
-                      textAlign: 'left',
-                      border: 'none',
-                      borderBottom: '1px solid #f8fafc',
-                      backgroundColor: isSelected ? '#f0fdf4' : 'transparent',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.2s',
-                      outline: 'none'
-                    }}
-                  >
-                    <span style={{ fontFamily: 'monospace', fontSize: '13px', fontWeight: '700', color: '#475569', width: '70px' }}>
-                      {patient.ticket}
-                    </span>
-                    <div style={{ flex: 1 }}>
-                      <span style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>{patient.name}</span>
-                      <span style={{ display: 'block', fontSize: '12px', color: '#64748b', marginTop: '2px' }}>🕒 {patient.time}</span>
+                  <button key={patient.id} type="button" onClick={() => setSelectedId(patient.id)} className={`w-full flex items-center gap-4 px-5 py-3.5 text-left border-none border-b border-slate-50 cursor-pointer transition-colors ${patient.id === selectedId ? 'bg-green-50' : 'bg-transparent hover:bg-slate-50'}`}>
+                    <span className="font-mono text-xs font-bold text-slate-600 w-[70px]">{patient.ticket}</span>
+                    <div className="flex-1">
+                      <span className="block text-sm font-semibold text-slate-800">{patient.name}</span>
+                      <span className="block text-xs text-slate-400 mt-0.5">🕒 {patient.time}</span>
                     </div>
-                    <span style={{ backgroundColor: config.bg, color: config.color, fontSize: '11px', fontWeight: '600', padding: '4px 8px', borderRadius: '6px', minWidth: '65px', textAlign: 'center' }}>
-                      {config.label}
-                    </span>
-                    <span style={{ color: '#cbd5e1', fontWeight: '700' }}>›</span>
+                    <span className={`text-[11px] font-semibold px-2 py-1 rounded-md min-w-[65px] text-center ${config.bg} ${config.color}`}>{config.label}</span>
                   </button>
                 );
               })
@@ -401,64 +280,32 @@ export default function DoctorDashboard() {
           </div>
         </div>
 
-        {/* Detailed Patient Records Dashboard Sidebar */}
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'sticky', top: '24px' }}>
-          <p style={{ margin: '0 0 16px 0', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            👤 Patient Medical Record Card
-          </p>
-          
+        <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm lg:sticky lg:top-6">
+          <p className="m-0 mb-4 text-xs font-bold text-slate-500 uppercase tracking-wide">👤 Patient Medical Record Card</p>
           {selectedPatient ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '14px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#f1f5f9', color: '#475569', display: 'flex', alignItems: 'center', justify: 'center', fontWeight: '700', fontSize: '14px' }}>
-                  {initials(selectedPatient.name)}
-                </div>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-3.5">
+                <div className="w-11 h-11 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm">{initials(selectedPatient.name)}</div>
                 <div>
-                  <div style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b' }}>{selectedPatient.name}</div>
-                  <span style={{ display: 'inline-block', backgroundColor: (STATUS_STYLING[selectedPatient.status] || STATUS_STYLING.waiting).bg, color: (STATUS_STYLING[selectedPatient.status] || STATUS_STYLING.waiting).color, fontSize: '10px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', marginTop: '4px' }}>
-                    {(STATUS_STYLING[selectedPatient.status] || STATUS_STYLING.waiting).label}
-                  </span>
+                  <div className="text-sm font-bold text-slate-800">{selectedPatient.name}</div>
+                  <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded mt-1 ${(STATUS_STYLING[selectedPatient.status] || STATUS_STYLING.waiting).bg} ${(STATUS_STYLING[selectedPatient.status] || STATUS_STYLING.waiting).color}`}>{ (STATUS_STYLING[selectedPatient.status] || STATUS_STYLING.waiting).label}</span>
                 </div>
               </div>
-
-              {/* Data Layout Metadata Grid Fields */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
-                <div style={{ display: 'flex', justify: 'space-between', borderBottom: '1px solid #fafafa', paddingBottom: '6px' }}>
-                  <span style={{ color: '#94a3b8' }}>📜 Roster Ticket:</span>
-                  <strong style={{ fontFamily: 'monospace', color: '#334155' }}>{selectedPatient.ticket}</strong>
-                </div>
-                <div style={{ display: 'flex', justify: 'space-between', borderBottom: '1px solid #fafafa', paddingBottom: '6px' }}>
-                  <span style={{ color: '#94a3b8' }}>🕒 Time Allocation:</span>
-                  <span style={{ color: '#334155', fontWeight: '500' }}>{selectedPatient.time}</span>
-                </div>
-                <div style={{ display: 'flex', justify: 'space-between', borderBottom: '1px solid #fafafa', paddingBottom: '6px' }}>
-                  <span style={{ color: '#94a3b8' }}>📞 Contact Number:</span>
-                  <a href={`tel:${selectedPatient.phone?.replace(/\s/g, '')}`} style={{ color: '#0284c7', textDecoration: 'none', fontWeight: '500' }}>
-                    {selectedPatient.phone}
-                  </a>
-                </div>
-                <div style={{ display: 'flex', justify: 'space-between', paddingBottom: '4px' }}>
-                  <span style={{ color: '#94a3b8' }}>✉️ Email Address:</span>
-                  <a href={`mailto:${selectedPatient.email}`} style={{ color: '#0284c7', textDecoration: 'none', fontWeight: '500' }}>
-                    {selectedPatient.email}
-                  </a>
-                </div>
+              <div className="flex flex-col gap-2.5 text-xs">
+                <div className="flex justify-between border-b border-slate-50 pb-1.5"><span className="text-slate-400">Roster Ticket:</span><strong className="font-mono text-slate-700">{selectedPatient.ticket}</strong></div>
+                <div className="flex justify-between border-b border-slate-50 pb-1.5"><span className="text-slate-400">Time Allocation:</span><span className="text-slate-700 font-medium">{selectedPatient.time}</span></div>
+                <div className="flex justify-between border-b border-slate-50 pb-1.5"><span className="text-slate-400">Contact Number:</span><span className="text-sky-600">{selectedPatient.phone}</span></div>
+                <div className="flex justify-between pb-1"><span className="text-slate-400">Email Address:</span><span className="text-sky-600">{selectedPatient.email}</span></div>
               </div>
-
-              <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px', marginTop: '4px' }}>
-                <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  Primary Consultation Symptoms
-                </span>
-                <p style={{ margin: 0, fontSize: '13px', color: '#475569', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #f1f5f9', fontStyle: 'italic' }}>
-                  "{selectedPatient.reason}"
-                </p>
+              <div className="border-t border-slate-100 pt-3.5 mt-1">
+                <span className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">Primary Symptoms</span>
+                <p className="m-0 text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 italic">"{selectedPatient.reason}"</p>
               </div>
             </div>
           ) : (
-            <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Select a pointer card on the active queue stream to inspect data layout records.</p>
+            <p className="text-slate-400 text-xs m-0">Select a patient card to inspect records.</p>
           )}
         </div>
-
       </div>
     </div>
   );
