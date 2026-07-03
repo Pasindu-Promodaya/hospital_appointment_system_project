@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import { useAuth } from './context/AuthContext'; // 🎯 FIX: Import global Auth context hook
 
 const Register = () => {
+  const { login } = useAuth(); // 🎯 FIX: Destructure your context state manager dispatcher
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -41,22 +43,35 @@ const Register = () => {
         phone: formData.telephoneNumber 
       };
       
-      await axios.post('/api/auth/register', payload);
+      // 🎯 FIX: Updated to point directly to your live Spring Boot backend server ports
+      await axios.post('http://localhost:8080/api/auth/register', payload);
       
-      const loginResponse = await axios.post('/api/auth/login', {
+      // Attempt automated authentication process right after a clean account creation
+      const loginResponse = await axios.post('http://localhost:8080/api/auth/login', {
         email: formData.email, 
         password: formData.password
       });
 
-      if (loginResponse.data) {
-        localStorage.setItem('userSession', JSON.stringify(loginResponse.data));
+      const data = loginResponse.data;
+
+      if (data && loginResponse.status === 200) {
+        // 🔑 🎯 FIX: Seed parameters securely into the global React app lifecycle memory engine
+        login({
+          token: data.token,
+          email: data.email,
+          role: data.role || 'ROLE_PATIENT',
+          id: data.id || null,
+          doctorId: data.doctorId || null
+        });
+
+        // 🚀 Smooth transition over to your Patient Dashboard layout
         navigate('/dashboard');
       } else {
         setError('Account created successfully, but profile initialization failed. Please try signing in manually.');
       }
     } catch (err) {
       console.error("Registration Error Context:", err);
-      setError(err.response?.data?.message || 'Registration failed. Please check your details.');
+      setError(err.response?.data?.message || err.response?.data || 'Registration processing anomaly. Please check your network connection.');
     } finally {
       setLoading(false);
     }
@@ -151,7 +166,7 @@ const Register = () => {
         </form>
 
         <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-          <Link to="/login" className="text-xs font-bold text-slate-500 hover:text-blue-600 transition duration-150">
+          <Link to="/patient-login" className="text-xs font-bold text-slate-500 hover:text-blue-600 transition duration-150">
             Already have a profile? <span className="underline">Sign in</span>
           </Link>
         </div>

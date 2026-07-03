@@ -11,6 +11,12 @@ public class PatientService {
     @Autowired
     private PatientRepository patientRepository;
 
+    // 🎯 INTEGRATED NODE: Fetches profiles matching the relational user identity tracking key
+    public Patient getPatientByUserId(Long userId) {
+        return patientRepository.findByUserId(userId)
+                .orElse(null); // Returns null so your controller drops a clean 404 block instead of crashing
+    }
+
     public Patient updatePatient(Long userId, Patient patientDetails) {
         Patient existingPatient = patientRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Patient record not found for user ID: " + userId));

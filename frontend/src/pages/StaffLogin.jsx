@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext'; 
 
-export default function Login() {
+export default function Login() { // 🎯 FIX: Corrected from 'public default' to 'export default'
   const { login } = useAuth();
   const navigate = useNavigate();
   
@@ -17,7 +17,8 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/api/auth/login', {
+      // Endpoint pointed straight to the isolated staff authentication controller mapping
+      const response = await fetch('http://localhost:8080/api/auth/login/staff', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -32,23 +33,33 @@ export default function Login() {
       }
 
       if (response.ok) {
-        // 🔑 Store token and roles into local global state memory context
-        login({
+        const sessionPayload = {
           token: data.token,
           email: data.email,
           role: data.role, 
-          doctorId: data.doctorId
-        });
+          id: data.id || null,
+          doctorId: data.doctorId || null
+        };
 
-        // 🧭 🌟 FIX: Targets updated to match your App.jsx routes perfectly!
-        if (data.role === 'ROLE_DOCTOR' || data.role === 'DOCTOR') {
-          navigate('/doctor-dashboard'); // Clean slash matching
-        } else if (data.role === 'ROLE_ADMIN' || data.role === 'ADMIN') {
+        // Store token properties into local global state memory context engine
+        login(sessionPayload);
+
+        // Cache using the identical string key format your context listeners look up
+        localStorage.setItem("userSession", JSON.stringify(sessionPayload));
+
+        // Sanitize string metrics to map routes completely safe from case discrepancies
+        const sanitizedRole = String(data.role || '').trim().toUpperCase();
+
+        // 🎯 FIX: Changed Java-style '.contains()' to JavaScript '.includes()'
+        if (sanitizedRole.includes('DOCTOR')) {
+          navigate('/doctor-dashboard');
+        } else if (sanitizedRole.includes('ADMIN')) {
           navigate('/admin');
         } else {
           navigate('/doctors');
         }
       } else {
+        // Captures strict 403 Forbidden messages if a patient tries to slip through
         setError(typeof data === 'object' ? (data.message || '⚠️ Invalid email or password.') : data);
       }
     } catch (err) {
@@ -62,9 +73,9 @@ export default function Login() {
   return (
     <div className="min-h-[85vh] flex items-center justify-center font-sans bg-slate-50 relative">
       
-      {/* 🌟 Patient Login Gateway Trigger (Positioned at the absolute top right corner of the outer viewport) */}
+      {/* Patient Login Gateway Trigger */}
       <button 
-        onClick={() => navigate('/patient-auth')}
+        onClick={() => navigate('/patient-auth')} 
         className="absolute top-6 right-6 px-[18px] py-2 bg-white hover:bg-slate-100 border border-slate-200 shadow-sm rounded-lg text-slate-800 font-semibold text-xs cursor-pointer transition-all duration-200 hover:-translate-y-0.5 flex items-center gap-1.5"
       >
         👤 Patient Login

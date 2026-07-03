@@ -22,16 +22,28 @@ export default function PatientAuth() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    Loading(true);
+    setLoading(true); // 🎯 FIX: Corrected casing from 'Loading' to 'setLoading'
 
-    // Dynamic configuration matching target action loop
+    // 🎯 FIX: Updated registration endpoint mapping path to match AuthController.java
     const endpoint = isLogin 
       ? 'http://localhost:8080/api/auth/login' 
-      : 'http://localhost:8080/api/auth/register-patient';
+      : 'http://localhost:8080/api/auth/register';
+
+    // 🎯 FIX: Parse Full Legal Name safely into separate firstName/lastName strings for the Spring Boot schema
+    const nameParts = name.trim().split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Patient';
 
     const payload = isLogin 
       ? { email, password } 
-      : { name, email, password, role: 'ROLE_PATIENT' };
+      : { 
+          email, 
+          password, 
+          firstName, 
+          lastName, 
+          dateOfBirth: "2000-01-01", // Default string row fallback to prevent back-end LocalDate parser crashes
+          phone: "0000000000" 
+        };
 
     try {
       const response = await fetch(endpoint, {
@@ -40,7 +52,15 @@ export default function PatientAuth() {
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      // Handle raw non-JSON text errors gracefully
+      const contentType = response.headers.get("content-type");
+      let data;
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const textData = await response.text();
+        data = { message: textData };
+      }
 
       if (response.ok) {
         // 🔑 Store user into global state context memory engine
@@ -49,7 +69,7 @@ export default function PatientAuth() {
           email: data.email,
           role: data.role || 'ROLE_PATIENT',
           id: data.id || null,
-          doctorId: null // Patients don't have a corporate doctor operational ID record
+          doctorId: data.doctorId || null
         });
 
         // 🚀 Forward directly to the booking form while maintaining context
@@ -75,7 +95,7 @@ export default function PatientAuth() {
           <h2 className="text-2xl font-extrabold text-slate-950 m-0 mb-1.5">
             {isLogin ? 'Patient Login Portal' : 'Patient Registration'}
           </h2>
-          <p className="m-0 text-slate-500 text-smSub text-sm leading-relaxed">
+          <p className="m-0 text-slate-500 text-sm leading-relaxed">
             {isLogin 
               ? 'Sign in to access your clinical scheduling view' 
               : 'Create a localized profile to finalize your session registration'}
@@ -110,7 +130,7 @@ export default function PatientAuth() {
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-slate-600">Email Address</label>
             <input
-              type="email"
+              type="type"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -134,7 +154,7 @@ export default function PatientAuth() {
           <button
             type="submit"
             disabled={loading}
-            className={`w-fullDoc w-full py-3.5 text-white font-bold text-sm border-none rounded-lg mt-2 transition-colors duration-150 shadow-sm shadow-blue-600/20 ${
+            className={`w-full py-3.5 text-white font-bold text-sm border-none rounded-lg mt-2 transition-colors duration-150 shadow-sm shadow-blue-600/20 ${
               loading 
                 ? 'bg-slate-400 cursor-not-allowed' 
                 : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'

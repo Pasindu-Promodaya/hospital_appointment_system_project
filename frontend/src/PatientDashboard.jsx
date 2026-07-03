@@ -26,28 +26,30 @@ const PatientDashboard = () => {
   useEffect(() => {
     const session = localStorage.getItem("userSession");
     if (session) {
-      const sessionData = JSON.parse(session);
-      const activeId = sessionData.userId || sessionData.id;
+      try {
+        const sessionData = JSON.parse(session);
+        const activeId = sessionData.id || sessionData.userId;
 
-      if (activeId) {
-        setUserId(activeId);
-        if (sessionData.email) {
+        if (activeId) {
+          setUserId(activeId);
           setPatient(sessionData);
           setFormData({
             firstName: sessionData.firstName || "",
             lastName: sessionData.lastName || "",
             sex: sessionData.sex || "",
             email: sessionData.email || "",
-            telephoneNumber:
-              sessionData.phone || sessionData.telephoneNumber || "",
+            telephoneNumber: sessionData.phone || sessionData.telephoneNumber || "",
             dateOfBirth: sessionData.dateOfBirth || "",
             bloodType: sessionData.bloodType || "",
             knownDrugAllergies: sessionData.knownDrugAllergies || "",
             chronicConditions: sessionData.chronicConditions || "",
             emergencyContactDetails: sessionData.emergencyContactDetails || "",
           });
+        } else {
+          setLoading(false);
         }
-      } else {
+      } catch (e) {
+        console.error("Session parsing failed:", e);
         setLoading(false);
       }
     } else {
@@ -55,29 +57,32 @@ const PatientDashboard = () => {
     }
   }, []);
 
-  // 🔄 Step 2: Fetch patient records dynamically
+  // 🔄 Step 2: Fetch patient records dynamically from the backend absolute port layout
   useEffect(() => {
     if (!userId) return;
 
     const fetchPatientData = async () => {
       try {
-        const { data } = await axios.get(`/api/patients/${userId}`);
-        setPatient(data);
-        setFormData({
-          firstName: data.firstName || "",
-          lastName: data.lastName || "",
-          sex: data.sex || "",
-          email: data.email || "",
-          telephoneNumber: data.phone || "",
-          dateOfBirth: data.dateOfBirth || "",
-          bloodType: data.bloodType || "",
-          knownDrugAllergies: data.knownDrugAllergies || "",
-          chronicConditions: data.chronicConditions || "",
-          emergencyContactDetails: data.emergencyContactDetails || "",
-        });
-        setLoading(false);
+        const { data } = await axios.get(`http://localhost:8080/api/patients/${userId}`);
+        
+        if (data) {
+          setPatient(data);
+          setFormData({
+            firstName: data.firstName || "",
+            lastName: data.lastName || "",
+            sex: data.sex || "",
+            email: data.email || "",
+            telephoneNumber: data.phone || "",
+            dateOfBirth: data.dateOfBirth || "",
+            bloodType: data.bloodType || "",
+            knownDrugAllergies: data.knownDrugAllergies || "",
+            chronicConditions: data.chronicConditions || "",
+            emergencyContactDetails: data.emergencyContactDetails || "",
+          });
+        }
       } catch (err) {
         console.warn("Real-time profiling lookup tracking note:", err.message);
+      } finally {
         setLoading(false);
       }
     };
@@ -99,9 +104,9 @@ const PatientDashboard = () => {
     };
 
     try {
-      const { data } = await axios.put(`/api/patients/${userId}`, payload);
+      const { data } = await axios.put(`http://localhost:8080/api/patients/${userId}`, payload);
       setPatient(data);
-      const unifiedSession = { userId, ...data };
+      const unifiedSession = { id: userId, userId, ...data };
       localStorage.setItem("userSession", JSON.stringify(unifiedSession));
       setIsEditing(false);
     } catch (err) {
@@ -111,7 +116,7 @@ const PatientDashboard = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("userSession");
-    navigate("/login");
+    navigate("/patient-auth"); 
   };
 
   const getInitials = (first, last) => {
@@ -132,36 +137,20 @@ const PatientDashboard = () => {
     );
   }
 
-  if (!patient) {
+  if (!patient || !userId) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <div className="max-w-md w-full bg-white p-6 rounded-xl shadow-sm border border-slate-200 text-center">
           <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-3">
-            <svg
-              className="w-6 h-6 text-red-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
+            <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h3 className="text-base font-bold text-slate-900">
-            Database Record Missing
-          </h3>
+          <h3 className="text-base font-bold text-slate-900">Database Record Missing</h3>
           <p className="text-xs text-slate-500 mt-1 mb-4">
-            No synchronized patient data matches system locator reference key
-            ID: {userId}.
+            No synchronized patient data matches system locator reference key ID: {userId || "Unassigned"}.
           </p>
-          <button
-            onClick={handleLogout}
-            className="text-xs font-semibold text-red-600 hover:underline"
-          >
+          <button onClick={handleLogout} className="text-xs font-semibold text-red-600 hover:underline">
             Log out from session
           </button>
         </div>
@@ -171,53 +160,6 @@ const PatientDashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans antialiased">
-      <header className="bg-white border-b border-slate-200/80 sticky top-0 z-10 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="bg-blue-600 text-white p-2 rounded-lg shadow-sm shadow-blue-500/20">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2.5"
-                  d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                />
-              </svg>
-            </div>
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block -mb-0.5">
-                My Health Dashboard
-              </span>
-              <h1 className="text-lg font-black tracking-tight text-slate-800">
-                HealthNode{" "}
-                <span className="text-blue-600 font-medium text-base">
-                  Medical Records
-                </span>
-              </h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate("/book-appointment")}
-              className="text-xs font-bold uppercase tracking-wider bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition duration-150"
-            >
-              Book Appointment
-            </button>
-            <button
-              onClick={handleLogout}
-              className="text-xs font-bold uppercase tracking-wider bg-slate-50 hover:bg-red-50 text-slate-600 hover:text-red-600 border border-slate-200 px-3 py-1.5 rounded-lg transition duration-150"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </header>
-
       <main className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {!isEditing ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -227,9 +169,7 @@ const PatientDashboard = () => {
                   {getInitials(patient.firstName, patient.lastName)}
                 </div>
                 <h2 className="text-xl font-bold text-slate-800 tracking-tight leading-snug">
-                  {patient.firstName || patient.lastName
-                    ? `${patient.firstName} ${patient.lastName}`
-                    : "Anonymous Profile"}
+                  {patient.firstName || patient.lastName ? `${patient.firstName} ${patient.lastName}` : "Anonymous Profile"}
                 </h2>
                 <span className="text-xs font-medium text-slate-400 mt-0.5">
                   UID System Identifier: #{patient.id || "Pending"}
@@ -247,81 +187,31 @@ const PatientDashboard = () => {
               <div className="pt-6 space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-slate-50 rounded-lg text-slate-400">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                      />
-                    </svg>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                   </div>
                   <div className="overflow-hidden">
-                    <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      Primary Email
-                    </span>
-                    <span className="text-sm font-medium text-slate-700 block truncate">
-                      {patient.email || "None Registered"}
-                    </span>
+                    <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Primary Email</span>
+                    <span className="text-sm font-medium text-slate-700 block truncate">{patient.email || "None Registered"}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-slate-50 rounded-lg text-slate-400">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2.5"
-                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                      />
-                    </svg>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                   </div>
                   <div>
-                    <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      Contact Number
-                    </span>
-                    <span className="text-sm font-medium text-slate-700 block">
-                      {patient.phone ||
-                        patient.telephoneNumber ||
-                        "Not Provided"}
-                    </span>
+                    <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Contact Number</span>
+                    <span className="text-sm font-medium text-slate-700 block">{patient.phone || patient.telephoneNumber || "Not Provided"}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-slate-50 rounded-lg text-slate-400">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M8 7V3m8 3V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                      />
-                    </svg>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 3V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                   </div>
                   <div>
-                    <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      Date of Birth
-                    </span>
-                    <span className="text-sm font-medium text-slate-700 block">
-                      {patient.dateOfBirth || "Not Provided"}
-                    </span>
+                    <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date of Birth</span>
+                    <span className="text-sm font-medium text-slate-700 block">{patient.dateOfBirth || "Not Provided"}</span>
                   </div>
                 </div>
               </div>
@@ -330,59 +220,21 @@ const PatientDashboard = () => {
                 onClick={() => setIsEditing(true)}
                 className="w-full mt-6 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-4 rounded-xl transition duration-150 ease-in-out shadow-sm text-sm flex items-center justify-center gap-2"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
-                Modify patients profile
+                Modify patient's profile
               </button>
             </div>
 
             <div className="lg:col-span-2 space-y-6">
-              <div
-                className={`bg-white border rounded-2xl shadow-sm transition-all overflow-hidden ${patient.knownDrugAllergies ? "border-red-200/80 shadow-red-50/50" : "border-slate-200/70"}`}
-              >
-                <div
-                  className={`px-5 py-4 flex items-center gap-3 border-b ${patient.knownDrugAllergies ? "bg-red-50/30 border-red-100" : "bg-slate-50/50 border-slate-100"}`}
-                >
-                  <div
-                    className={`p-1.5 rounded-lg ${patient.knownDrugAllergies ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-400"}`}
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2.5"
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                      />
-                    </svg>
+              <div className={`bg-white border rounded-2xl shadow-sm transition-all overflow-hidden ${patient.knownDrugAllergies ? "border-red-200/80 shadow-red-50/50" : "border-slate-200/70"}`}>
+                <div className={`px-5 py-4 flex items-center gap-3 border-b ${patient.knownDrugAllergies ? "bg-red-50/30 border-red-100" : "bg-slate-50/50 border-slate-100"}`}>
+                  <div className={`p-1.5 rounded-lg ${patient.knownDrugAllergies ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-400"}`}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                   </div>
-                  <h3
-                    className={`text-xs font-bold uppercase tracking-wider ${patient.knownDrugAllergies ? "text-red-800" : "text-slate-500"}`}
-                  >
-                    Known Drug Allergies
-                  </h3>
+                  <h3 className={`text-xs font-bold uppercase tracking-wider ${patient.knownDrugAllergies ? "text-red-800" : "text-slate-500"}`}>Known Drug Allergies</h3>
                 </div>
                 <div className="p-5">
-                  <p
-                    className={`text-sm leading-relaxed whitespace-pre-line font-medium ${patient.knownDrugAllergies ? "text-slate-800" : "text-slate-400 italic"}`}
-                  >
-                    {patient.knownDrugAllergies ||
-                      "No known clinical pharmaceutical or compound responses recorded."}
+                  <p className={`text-sm leading-relaxed whitespace-pre-line font-medium ${patient.knownDrugAllergies ? "text-slate-800" : "text-slate-400 italic"}`}>
+                    {patient.knownDrugAllergies || "No known clinical pharmaceutical responses recorded."}
                   </p>
                 </div>
               </div>
@@ -390,146 +242,68 @@ const PatientDashboard = () => {
               <div className="bg-white border border-slate-200/70 rounded-2xl shadow-sm overflow-hidden">
                 <div className="px-5 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
                   <div className="p-1.5 bg-amber-50 rounded-lg text-amber-600 border border-amber-100">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2.5"
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                      />
-                    </svg>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                   </div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Chronic Morbidities & Conditions
-                  </h3>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Chronic Morbidities & Conditions</h3>
                 </div>
                 <div className="p-5">
-                  <p
-                    className={`text-sm leading-relaxed whitespace-pre-line font-medium ${patient.chronicConditions ? "text-slate-800" : "text-slate-400 italic"}`}
-                  >
-                    {patient.chronicConditions ||
-                      "No active long-term pathogenetic mappings or chronic constraints recorded."}
+                  <p className={`text-sm leading-relaxed whitespace-pre-line font-medium ${patient.chronicConditions ? "text-slate-800" : "text-slate-400 italic"}`}>
+                    {patient.chronicConditions || "No active long-term chronic conditions recorded."}
                   </p>
                 </div>
               </div>
 
+              {/* Added View Section for Emergency Contact */}
               <div className="bg-white border border-slate-200/70 rounded-2xl shadow-sm overflow-hidden">
                 <div className="px-5 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
                   <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600 border border-blue-100">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2.5"
-                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                      />
-                    </svg>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
                   </div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                    Emergency Proxy Contact Safeguard
-                  </h3>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Emergency Proxy Contact</h3>
                 </div>
                 <div className="p-5">
-                  <p
-                    className={`text-sm font-semibold tracking-tight ${patient.emergencyContactDetails ? "text-slate-800" : "text-slate-400 italic"}`}
-                  >
-                    {patient.emergencyContactDetails ||
-                      "No priority designated proxy contact array configured."}
+                  <p className={`text-sm font-semibold tracking-tight ${patient.emergencyContactDetails ? "text-slate-800" : "text-slate-400 italic"}`}>
+                    {patient.emergencyContactDetails || "No designated emergency proxy contact details configured."}
                   </p>
                 </div>
               </div>
             </div>
           </div>
         ) : (
+          /* 🎯 FIX: Form Layout Hydrated with All Custom Input Fields */
           <div className="max-w-3xl mx-auto bg-white border border-slate-200/80 rounded-2xl shadow-sm p-8">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
               <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-                  Update Personal Information
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Keep your profile accurate to ensure seamless care with your
-                  healthcare team.
-                </p>
+                <h2 className="text-lg font-bold text-slate-900 tracking-tight">Update Personal Information</h2>
+                <p className="text-xs text-slate-400">Keep your profile accurate to ensure seamless care with your healthcare team.</p>
               </div>
             </div>
 
             <form onSubmit={handleSave} className="space-y-6">
+              {/* Row 1: First Name & Last Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium"
-                  />
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">First Name</label>
+                  <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleChange}
-                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium"
-                  />
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Last Name</label>
+                  <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium" />
                 </div>
               </div>
 
+              {/* Row 2: Date of Birth & Blood Group */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                    Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    name="dateOfBirth"
-                    value={formData.dateOfBirth}
-                    onChange={handleChange}
-                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium"
-                  />
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Date of Birth</label>
+                  <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                    Blood Group Type
-                  </label>
-                  <select
-                    name="bloodType"
-                    value={formData.bloodType}
-                    onChange={handleChange}
-                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium appearance-none"
-                  >
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Blood Group Type</label>
+                  <select name="bloodType" value={formData.bloodType} onChange={handleChange} className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium select-custom">
                     <option value="">Select Group</option>
                     <option value="A+">A+</option>
                     <option value="A-">A-</option>
@@ -543,44 +317,23 @@ const PatientDashboard = () => {
                 </div>
               </div>
 
+              {/* Row 3: Email & Telephone */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium"
-                  />
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Email Address</label>
+                  <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                    Telephone Number
-                  </label>
-                  <input
-                    type="tel"
-                    name="telephoneNumber"
-                    value={formData.telephoneNumber}
-                    onChange={handleChange}
-                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium"
-                  />
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Telephone Number</label>
+                  <input type="tel" name="telephoneNumber" value={formData.telephoneNumber} onChange={handleChange} className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium" />
                 </div>
               </div>
 
+              {/* Row 4: Gender & Emergency Contact */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                    Sex / Gender
-                  </label>
-                  <select
-                    name="sex"
-                    value={formData.sex}
-                    onChange={handleChange}
-                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium appearance-none"
-                  >
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Sex / Gender</label>
+                  <select name="sex" value={formData.sex} onChange={handleChange} className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium select-custom">
                     <option value="">Select Gender</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
@@ -588,60 +341,25 @@ const PatientDashboard = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                    Emergency Contact Safeguard Profile
-                  </label>
-                  <input
-                    type="text"
-                    name="emergencyContactDetails"
-                    value={formData.emergencyContactDetails}
-                    onChange={handleChange}
-                    className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium"
-                    placeholder="Full Name — Number"
-                  />
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Emergency Contact Details</label>
+                  <input type="text" name="emergencyContactDetails" value={formData.emergencyContactDetails} onChange={handleChange} className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium" placeholder="Name — Number" />
                 </div>
               </div>
 
+              {/* Textareas: Allergies & Chronic Conditions */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-red-500 mb-1.5">
-                  Known Drug Allergies
-                </label>
-                <textarea
-                  name="knownDrugAllergies"
-                  value={formData.knownDrugAllergies}
-                  onChange={handleChange}
-                  rows="2"
-                  className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none transition bg-slate-50/40 font-medium"
-                ></textarea>
+                <label className="block text-xs font-bold uppercase tracking-wider text-red-500 mb-1.5">Known Drug Allergies</label>
+                <textarea name="knownDrugAllergies" value={formData.knownDrugAllergies} onChange={handleChange} rows="2" className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none transition bg-slate-50/40 font-medium"></textarea>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-amber-600 mb-1.5">
-                  Chronic Conditions
-                </label>
-                <textarea
-                  name="chronicConditions"
-                  value={formData.chronicConditions}
-                  onChange={handleChange}
-                  rows="2"
-                  className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition bg-slate-50/40 font-medium"
-                ></textarea>
+                <label className="block text-xs font-bold uppercase tracking-wider text-amber-600 mb-1.5">Chronic Conditions</label>
+                <textarea name="chronicConditions" value={formData.chronicConditions} onChange={handleChange} rows="2" className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition bg-slate-50/40 font-medium"></textarea>
               </div>
-
-              <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-5 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider py-2.5 px-5 rounded-xl transition duration-150"
-                >
-                  Discard Edits
-                </button>
-                <button
-                  type="submit"
-                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-2.5 px-6 rounded-xl transition duration-150 shadow-md shadow-blue-500/10"
-                >
-                  Update Edits
-                </button>
+              
+              <div className="flex items-center justify-end gap-3 pt-5 border-t border-slate-100">
+                <button type="button" onClick={() => setIsEditing(false)} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase tracking-wider py-2.5 px-5 rounded-xl transition">Discard Edits</button>
+                <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-2.5 px-6 rounded-xl transition shadow-md shadow-blue-500/10">Update Edits</button>
               </div>
             </form>
           </div>

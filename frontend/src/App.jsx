@@ -5,7 +5,8 @@ import Booking from './pages/BookingPage';
 import DoctorDirectory from './pages/DoctorDirectory';
 import DoctorDashboard from './pages/DoctorDashboard';
 import PatientAuth from './pages/PatientAuth';
-import Login from './pages/Login';
+import Login from './pages/StaffLogin';
+import PatientLogin from './PatientLogin';
 import Register from './Register'; 
 import PatientDashboard from './PatientDashboard';
 import BookAppointment from './components/BookAppointment';
@@ -16,6 +17,7 @@ export default function App() {
       <Routes>
         {/* 🔐 Public Fullscreen Auth Gateways (Bypasses Layout Overlays) */}
         <Route path="/login" element={<Login />} />
+        <Route path="/patient-login" element={<PatientLogin />} />
         <Route path="/register" element={<Register />} />
         <Route path="/patient-auth" element={<PatientAuth />} />
 
@@ -36,7 +38,7 @@ export default function App() {
                   <Route path="/booking" element={<Booking />} />
                   
                   {/* Teammate Patient Profile Module Paths */}
-                  <Route path="/dashboard" element={<PatientDashboard />} />
+                  <Route path="/patient-dashboard" element={<PatientDashboard />} />
                   <Route path="/book-appointment" element={<BookAppointment />} />
 
                   {/* Fallback Catch-All Redirect Engine Rule */}

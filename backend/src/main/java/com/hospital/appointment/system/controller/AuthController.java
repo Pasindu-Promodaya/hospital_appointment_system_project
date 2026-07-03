@@ -19,7 +19,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"}) // Keeps your dual multi-port testing origins
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"}) 
 public class AuthController {
 
     @Autowired
@@ -29,12 +29,11 @@ public class AuthController {
     private PatientRepository patientRepository;
 
     @Autowired
-    private PasswordEncoder passwordEncoder; // Uses the generic PasswordEncoder matching your clean SecurityConfig bean
+    private PasswordEncoder passwordEncoder; 
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider; 
 
-    // 🧑‍💻 TEAMMATE'S ENDPOINT: Register new patients into the database repository cleanly
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -43,8 +42,8 @@ public class AuthController {
 
         User user = new User();
         user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword())); // Securely hashes password via BCrypt
-        user.setRole("ROLE_PATIENT"); // Standardizes your role context values
+        user.setPassword(passwordEncoder.encode(request.getPassword())); 
+        user.setRole("ROLE_PATIENT"); 
 
         User savedUser = userRepository.save(user);
 
@@ -61,10 +60,9 @@ public class AuthController {
         return ResponseEntity.ok("🎯 Registration successful!");
     }
 
-    // 🎯 INTEGRATED ENGINE: Unified authentication pipeline for both Doctors and Patients
-    @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest) {
-        // 1. Look up user by email context
+    // 👨‍⚕️ STAFF ACCESS PORTAL (Rejects Patients)
+    @PostMapping("/login/staff")
+    public ResponseEntity<?> loginStaff(@RequestBody LoginRequest loginRequest) {
         Optional<User> userOptional = userRepository.findByEmail(loginRequest.getEmail());
 
         if (userOptional.isEmpty()) {
@@ -74,33 +72,54 @@ public class AuthController {
 
         User user = userOptional.get();
 
-        // 2. Validate password using secure BCrypt evaluation matching mechanics
+        // 🎯 SECURITY CHECK: If the user has a patient role, reject access from provider interface
+        String role = user.getRole() != null ? user.getRole().toUpperCase() : "";
+        if (role.contains("PATIENT")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("❌ Access Denied: Patients cannot authenticate through the Provider Gateway.");
+        }
+
         if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("❌ Access Denied: Invalid password key.");
         }
 
-        // 3. Generate a real, cryptographically signed token string
         String realJwtToken = jwtTokenProvider.generateToken(user.getEmail(), user.getRole());
-
-        // 4. Extract linked doctor ID properties safely if the role matches
         Long linkedDoctorId = (user.getDoctor() != null) ? user.getDoctor().getId() : null;
 
-        // 5. Check if patient metadata is attached to handle teammate dashboard hydration requirements
-        Optional<Patient> patientOpt = patientRepository.findByUserId(user.getId());
-        Patient linkedPatientProfile = patientOpt.orElse(null);
+        // 🎯 FIX: Added user.getId() into the parameter slot matching the updated constructor layout
+        AuthResponse response = new AuthResponse(realJwtToken, user.getEmail(), user.getRole(), user.getId(), linkedDoctorId);
+        return ResponseEntity.ok(response);
+    }
 
-        // 6. Return a comprehensive response containing the token and corresponding active user data hooks
-        AuthResponse response = new AuthResponse(
-                realJwtToken, 
-                user.getEmail(), 
-                user.getRole(), 
-                linkedDoctorId
-        );
-        
-        // If your AuthResponse DTO allows custom properties, you can also attach the patient object:
-        // response.setPatientProfile(linkedPatientProfile);
+    // 🩺 PATIENT ACCESS PORTAL (Rejects Staff)
+    @PostMapping("/login/patient")
+    public ResponseEntity<?> loginPatient(@RequestBody LoginRequest loginRequest) {
+        Optional<User> userOptional = userRepository.findByEmail(loginRequest.getEmail());
 
+        if (userOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("❌ Patient account not found.");
+        }
+
+        User user = userOptional.get();
+
+        // 🎯 SECURITY CHECK: If the user is NOT a patient (Doctor/Admin), explicitly kick them out
+        String role = user.getRole() != null ? user.getRole().toUpperCase() : "";
+        if (!role.contains("PATIENT")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("❌ Access Denied: Staff accounts must use the Provider Gateway portal.");
+        }
+
+        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("❌ Access Denied: Invalid password key.");
+        }
+
+        String realJwtToken = jwtTokenProvider.generateToken(user.getEmail(), user.getRole());
+
+        // 🎯 FIX: Added user.getId() into the parameter slot matching the updated constructor layout
+        AuthResponse response = new AuthResponse(realJwtToken, user.getEmail(), user.getRole(), user.getId(), null);
         return ResponseEntity.ok(response);
     }
 }

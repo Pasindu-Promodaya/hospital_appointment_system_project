@@ -4,12 +4,15 @@ public class AuthResponse {
     private String token;
     private String email;
     private String role;
-    private Long doctorId; // Will return the linked doctor's ID if the user is a doctor
+    private Long id; // User ID
+    private Long doctorId; // Doctor ID
 
-    public AuthResponse(String token, String email, String role, Long doctorId) {
+    // 🎯 CRITICAL: Must accept exactly 5 parameters in this specific order
+    public AuthResponse(String token, String email, String role, Long id, Long doctorId) {
         this.token = token;
         this.email = email;
         this.role = role;
+        this.id = id;
         this.doctorId = doctorId;
     }
 
@@ -22,6 +25,9 @@ public class AuthResponse {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
     public Long getDoctorId() { return doctorId; }
     public void setDoctorId(Long doctorId) { this.doctorId = doctorId; }

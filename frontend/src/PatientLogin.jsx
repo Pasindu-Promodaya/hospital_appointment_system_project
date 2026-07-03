@@ -1,8 +1,13 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "./context/AuthContext";
 
 const Login = () => {
-  // Renamed state from username to email
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  // State configurations
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -14,26 +19,40 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // Axios now sends email instead of username
-      const response = await axios.post("/api/auth/login", {
+      // 🎯 FIX 1: Pointed directly to your isolated split patient login endpoint routing
+      const response = await axios.post("http://localhost:8080/api/auth/login/patient", {
         email: email,
         password: password,
       });
 
-      // Seed the received user identity data payload into browser local storage
-      const sessionData = response.data;
-      localStorage.setItem("userSession", JSON.stringify(sessionData));
+      const data = response.data;
 
-      // Route entry directly forward into the secure clinical workspace
-      window.location.href = "/dashboard";
+      if (response.status === 200) {
+        const sessionPayload = {
+          token: data.token,
+          email: data.email,
+          role: data.role || 'ROLE_PATIENT',
+          id: data.id || null, // Holds user.getId() from your updated AuthResponse DTO
+          userId: data.id || null // Double structural backup alignment
+        };
+
+        // Safely map verification tokens into your dynamic global context layer
+        login(sessionPayload);
+
+        // 🎯 FIX 2: Explicitly persist payload properties so the Dashboard reads it perfectly on mount
+        localStorage.setItem("userSession", JSON.stringify(sessionPayload));
+
+        // 🎯 FIX 3: Clean navigation routing straight to the patient dashboard node route mapping
+        navigate("/dashboard");
+      }
     } catch (err) {
       console.error("Login System Error:", err);
 
-      // Safe processing of backend error objects into plain strings
+      // Safe processing of backend error objects (including our strict 403 blocks) into readable text strings
       const backendErrorMessage =
         err.response?.data?.message ||
         err.response?.data ||
-        "Authentication node unreachable. Please try again later.";
+        "Authentication node unreachable. Please verify Spring Boot is running on port 8080.";
 
       setError(String(backendErrorMessage));
     } finally {
@@ -67,8 +86,7 @@ const Login = () => {
           <span className="text-blue-600 font-medium text-xl">System</span>
         </h2>
         <p className="mt-2 text-xs text-slate-500">
-          Welcome back. Please authenticate to view your appointments and
-          records.
+          Welcome back. Please authenticate to view your appointments and records.
         </p>
       </div>
 
@@ -116,7 +134,7 @@ const Login = () => {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth="2"
-                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                     />
                   </svg>
                 </div>
@@ -126,7 +144,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full text-sm p-3 pl-10 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium"
-                  placeholder="e.g., doctor@hospital.com"
+                  placeholder="e.g., patient@gmail.com"
                 />
               </div>
             </div>
@@ -200,7 +218,7 @@ const Login = () => {
             </div>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-slate-100 text-center">
+          <div className="text-center mt-7 text-xs">
             <p className="text-xs text-slate-400">
               Need to book an appointment?{" "}
               <a

@@ -3,36 +3,63 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
-  // 🌟 Extract the validated user session details 
   const { user, logout } = useAuth(); 
   
-  // 🔍 Synchronized session evaluator
-  const userRole = user?.role || localStorage.getItem('role'); 
+  // Safely extract role parameters from global state or browser session caching objects
+  const getActiveRole = () => {
+    if (user?.role) return user.role;
+    const cachedSession = localStorage.getItem('userSession');
+    if (cachedSession) {
+      try {
+        return JSON.parse(cachedSession)?.role || null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return localStorage.getItem('role');
+  };
+
+  const userRole = getActiveRole();
+  // 🎯 FIX: Defined globally at the top of the component so the utility bar can read it safely
+  const sanitizedRole = String(userRole || '').trim().toUpperCase();
 
   const allMenuItems = [
     { path: '/doctor-dashboard', label: '👨‍⚕️ Doctor Portal', role: 'ROLE_DOCTOR', borderClass: 'hover:border-sky-600 active:border-sky-600', activeColor: '#0284c7' },
     { path: '/doctors', label: '⚕️ Doctors Directory', role: 'PUBLIC', borderClass: 'hover:border-sky-400 active:border-sky-400', activeColor: '#38bdf8' },
-    { path: '/booking', label: '📅 Book Appointments', role: 'PUBLIC', borderClass: 'hover:border-green-400 active:border-green-400', activeColor: '#4ade80' },
-    { path: '/profile', label: '🩺 Patient Records', role: 'ROLE_MEMBER3', borderClass: 'hover:border-pink-400 active:border-pink-400', activeColor: '#f472b6' },
+    // 🎯 FIX: Ensured this is strictly set to 'ROLE_PATIENT' so guests can't view it
+    { path: '/booking', label: '📅 Book Appointments', role: 'ROLE_PATIENT', borderClass: 'hover:border-green-400 active:border-green-400', activeColor: '#4ade80' },
+    { path: '/patient-dashboard', label: '🩺 Patient Portal', role: 'ROLE_PATIENT', borderClass: 'hover:border-pink-400 active:border-pink-400', activeColor: '#f472b6' },
     { path: '/admin', label: '📊 Staff Roster', role: 'ROLE_ADMIN', borderClass: 'hover:border-amber-400 active:border-amber-400', activeColor: '#fbbf24' },
-    { path: '/notifications', label: '🔔 Channel Alerts', role: 'ROLE_MEMBER5', borderClass: 'hover:border-violet-400 active:border-violet-400', activeColor: '#a78bfa' }
+    { path: '/notifications', label: '🔔 Channel Alerts', role: 'ROLE_PATIENT_ALERTS', borderClass: 'hover:border-violet-400 active:border-violet-400', activeColor: '#a78bfa' }
   ];
 
   // 🌟 DYNAMIC FILTER ENGINE: Rules-based visibility matrix
   const visibleMenuItems = allMenuItems.filter(item => {
-    if (!userRole) {
-      // 👥 Scenario A: Public Guest -> Show only public exploratory entries
-      return item.role === 'PUBLIC';
-    } else if (userRole === 'ROLE_DOCTOR' || userRole === 'DOCTOR') {
-      // 👨‍⚕️ Scenario B: Authorized Doctor -> View private management deck exclusively
-      return item.role === 'ROLE_DOCTOR';
-    } else if (userRole === 'ROLE_ADMIN' || userRole === 'ADMIN') {
-      // 📊 Scenario C: Hospital Administrator -> View workspace panel exclusively
-      return item.role === 'ROLE_ADMIN';
-    } else if (userRole === 'ROLE_PATIENT' || userRole === 'PATIENT') {
-      // 🩺 Scenario D: Authenticated Patient -> Keep public channels active + append historical charts
-      return item.role === 'PUBLIC' || item.role === 'ROLE_MEMBER3';
+    // Rule 1: Public items are unconditionally visible to everyone
+    if (item.role === 'PUBLIC') {
+      return true;
     }
+
+    // Rule 2: If no active user session exists, explicitly reject all non-public items
+    if (!userRole || sanitizedRole === 'NULL' || sanitizedRole === '') {
+      return item.role === 'PUBLIC';
+    }
+
+    // Scenario B: Authorized Doctor Deck
+    if (sanitizedRole === 'ROLE_DOCTOR' || sanitizedRole === 'DOCTOR') {
+      return item.role === 'ROLE_DOCTOR';
+    }
+
+    // Scenario C: Hospital Administrator Panel
+    if (sanitizedRole === 'ROLE_ADMIN' || sanitizedRole === 'ADMIN') {
+      return item.role === 'ROLE_ADMIN';
+    }
+
+    // Scenario d: Authenticated Patient Context
+    if (sanitizedRole === 'ROLE_PATIENT' || sanitizedRole === 'PATIENT') {
+      return item.role === 'ROLE_PATIENT' || item.role === 'ROLE_PATIENT_ALERTS';
+    }
+
     return false;
   });
 
@@ -42,27 +69,29 @@ const Navbar = () => {
       <div className="flex justify-between items-center px-10 py-2 border-b border-slate-100 text-xs text-slate-500 bg-slate-50">
         <div className="flex gap-6 font-semibold">
           <span className="text-blue-600 border-b-2 border-blue-600 pb-2">
-            {userRole ? `${userRole.replace('ROLE_', '')} Workspace` : 'Public Gateway'}
+            {userRole && sanitizedRole !== 'NULL' && sanitizedRole !== '' 
+              ? `${userRole.replace('ROLE_', '')} Workspace` 
+              : 'Public Gateway'}
           </span>
         </div>
         
-        {/* 🛠️ Top-Right Controls Container */}
+        {/* Top-Right Controls Container */}
         <div className="flex items-center gap-5">
-          {/* 🌟 Patient Login Button (Visible only when no active user session exists) */}
-          {!userRole && (
+          {(!userRole || sanitizedRole === 'NULL' || sanitizedRole === '') && (
             <button 
-              onClick={() => window.location.href = '/patient-auth'} // Redirects to patient login gateway
-              className="bg-none border-none text-emerald-600 font-bold cursor-pointer hover:text-emerald-700 transition-colors"
+              onClick={() => window.location.href = '/patient-login'} 
+              className="bg-none border-none text-emerald-600 font-bold cursor-pointer hover:text-emerald-700 transition-colors border-r border-slate-200 pr-5 last:border-none"
             >
               Patient Login 👤
             </button>
           )}
 
-          {userRole ? (
+          {userRole && sanitizedRole !== 'NULL' && sanitizedRole !== '' ? (
             <button 
               onClick={() => {
                 logout();
-                window.location.href = '/doctors'; // Clean flush redirection target
+                localStorage.clear(); 
+                window.location.href = '/doctors'; 
               }}
               className="bg-none border-none text-rose-500 font-semibold cursor-pointer hover:text-rose-600 transition-colors"
             >
