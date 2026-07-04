@@ -35,7 +35,7 @@ export default function AdminDashboard() {
     // Fetch master list of registered practitioners
     const fetchRegisteredDoctors = async () => {
         try {
-            const response = await fetch('http://localhost:8080/api/admin/doctors'); // Ensure this route is open in your SecurityConfig
+            const response = await fetch('http://localhost:8080/api/admin/doctors');
             if (response.ok) {
                 const data = await response.json();
                 setDoctorsList(data);
@@ -45,7 +45,6 @@ export default function AdminDashboard() {
             }
         } catch (err) {
             console.error("Error pulling doctor array:", err.message);
-            // Fallback mock array if database records are empty
             const fallback = [
                 { id: 1, firstName: "Kasun", lastName: "Rathnayaka", specialization: "General Practitioner (OPD)" },
                 { id: 2, firstName: "Nimal", lastName: "Ekanayaka", specialization: "Dental" },
@@ -88,7 +87,6 @@ export default function AdminDashboard() {
         fetchRegisteredDoctors();
     }, []);
 
-    // Polling effect loops automatically every 3 seconds to keep counters synchronized live
     useEffect(() => {
         if (selectedDoctorId) {
             fetchDoctorQueueData(selectedDoctorId);
@@ -141,7 +139,7 @@ export default function AdminDashboard() {
             setRegSuccess(resultText);
             setDocEmail(''); setDocPassword(''); setDocFirstName(''); setDocLastName('');
             setDocPhone(''); setDocSpecialization(''); setDocLicense('');
-            fetchRegisteredDoctors(); // Refresh top dropdown array list instantly
+            fetchRegisteredDoctors();
         } catch (err) {
             setRegError(err.message);
         }
@@ -168,53 +166,52 @@ export default function AdminDashboard() {
     };
 
     return (
-        <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
+        <div className="bg-slate-50 min-h-screen font-sans">
             {/* Top Workspace Bar Strip */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 40px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
-                <span style={{ color: '#2563eb', fontWeight: '700', borderBottom: '2px solid #2563eb', paddingBottom: '4px', fontSize: '14px' }}>
-                    ADMIN Workspace
+            <div className="flex justify-between items-center px-10 py-3.5 border-b border-slate-200 bg-white">
+                <span className="text-blue-600 font-bold border-b-2 border-blue-600 pb-1 text-sm tracking-wide">
+                    ADMIN WORKSPACE
                 </span>
                 <div>
                     {isAdminLoggedIn ? (
-                        <button onClick={handleLogout} style={{ border: '1px solid #ef4444', backgroundColor: '#fef2f2', color: '#ef4444', padding: '6px 12px', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
+                        <button onClick={handleLogout} className="border border-rose-500 bg-rose-50 text-rose-600 px-3 py-1.5 rounded-md font-semibold cursor-pointer text-xs transition-colors hover:bg-rose-100">
                             Sign Out 🚪
                         </button>
                     ) : (
-                        <button style={{ border: '1px solid #2563eb', backgroundColor: '#eff6ff', color: '#2563eb', padding: '6px 12px', borderRadius: '6px', fontWeight: '600', fontSize: '13px' }}>
+                        <button className="border border-blue-600 bg-blue-50 text-blue-600 px-3 py-1.5 rounded-md font-semibold text-xs">
                             Staff Login 🔐
                         </button>
                     )}
                 </div>
             </div>
 
-            <div style={{ padding: '40px', maxWidth: '1400px', margin: '0 auto' }}>
+            <div className="p-10 max-w-[1400px] mx-auto">
                 {/* Title Segment */}
-                <div style={{ marginBottom: '30px' }}>
-                    <h1 style={{ margin: 0, fontSize: '32px', fontWeight: '800', color: '#0f172a' }}>Patient Queue & Admin Dashboard</h1>
-                    <p style={{ margin: '6px 0 0 0', color: '#64748b', fontSize: '15px' }}>
+                <div className="mb-8">
+                    <h1 className="m-0 text-3xl font-extrabold text-slate-900 tracking-tight">Patient Queue & Admin Dashboard</h1>
+                    <p className="m-0 mt-1.5 text-slate-500 text-sm font-medium">
                         {isAdminLoggedIn ? `Welcome back, Admin (ID: ${currentAdmin?.id})` : "Welcome back, Mahima"}
                     </p>
                 </div>
 
                 {/* Dashboard Core Interface Layout Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '30px', alignItems: 'start' }}>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
-                    {/* Left Panel Set */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                    {/* Left Panel Set (Spans 2 columns) */}
+                    <div className="lg:col-span-2 flex flex-col gap-8">
 
-                        {/* Live Patient Queue Container with Built-in filtering Dropdown */}
-                        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {/* Live Patient Queue Container with Dropdown */}
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+                                <h3 className="m-0 text-lg font-bold text-slate-900 flex items-center gap-2">
                                     👥 Live Patient Queue
                                 </h3>
-                                {/* Integrated Action Filter Dropdown */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#64748b' }}>Select Practitioner:</span>
+                                <div className="flex items-center gap-2.5">
+                                    <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Select Practitioner:</span>
                                     <select
                                         value={selectedDoctorId}
                                         onChange={(e) => setSelectedDoctorId(e.target.value)}
-                                        style={{ backgroundColor: '#f1f5f9', color: '#0f172a', border: '1px solid #cbd5e1', padding: '6px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '700', outline: 'none', cursor: 'pointer' }}
+                                        className="bg-slate-100 text-slate-900 border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold outline-none cursor-pointer"
                                     >
                                         {doctorsList.map(doc => (
                                             <option key={doc.id} value={doc.id}>Dr. {doc.firstName} {doc.lastName} ({doc.specialization?.split(' ')[0]})</option>
@@ -223,162 +220,152 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
 
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                                <thead>
-                                <tr style={{ color: '#94a3b8', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9' }}>
-                                    <th style={{ padding: '12px 8px' }}>Token No</th>
-                                    <th style={{ padding: '12px 8px' }}>Patient Name</th>
-                                    <th style={{ padding: '12px 8px' }}>Status</th>
-                                </tr>
-                                </thead>
-                                <tbody style={{ fontSize: '14px', fontWeight: '600' }}>
-                                {queueRecords.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="3" style={{ padding: '24px 8px', textalign: 'center', color: '#94a3b8', fontWeight: '500' }}>
-                                            No active patient tokens issued for this practitioner today.
-                                        </td>
+                            <div className="overflow-x-auto">
+                                <table className="w-full border-collapse text-left">
+                                    <thead>
+                                    <tr className="text-slate-400 text-xs font-bold uppercase border-b border-slate-100">
+                                        <th className="py-3 px-2">Token No</th>
+                                        <th className="py-3 px-2">Patient Name</th>
+                                        <th className="py-3 px-2">Status</th>
                                     </tr>
-                                ) : (
-                                    queueRecords.map((record, index) => (
-                                        <tr key={index} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                            <td style={{ padding: '16px 8px', color: '#2563eb' }}>#{record.tokenNumber}</td>
-                                            <td style={{ padding: '16px 8px', color: '#334155' }}>{record.patientName}</td>
-                                            <td style={{ padding: '16px 8px' }}>
-                                                    <span style={{
-                                                        backgroundColor: record.status === 'IN_CONSULTATION' ? '#dcfce7' : '#fef9c3',
-                                                        color: record.status === 'IN_CONSULTATION' ? '#16a34a' : '#ca8a04',
-                                                        padding: '4px 8px', borderRadius: '6px', fontSize: '12px'
-                                                    }}>
-                                                        {record.status.replace('_', ' ')}
-                                                    </span>
+                                    </thead>
+                                    <tbody className="text-sm font-semibold">
+                                    {queueRecords.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="3" className="py-6 px-2 text-center text-slate-400 font-medium">
+                                                No active patient tokens issued for this practitioner today.
                                             </td>
                                         </tr>
-                                    ))
-                                )}
-                                </tbody>
-                            </table>
+                                    ) : (
+                                        queueRecords.map((record, index) => (
+                                            <tr key={index} className="border-b border-slate-100 last:border-none">
+                                                <td className="py-4 px-2 text-blue-600">#{record.tokenNumber}</td>
+                                                <td className="py-4 px-2 text-slate-700">{record.patientName}</td>
+                                                <td className="py-4 px-2">
+                                                        <span className={`px-2 py-1 rounded-md text-xs font-bold ${
+                                                            record.status === 'IN_CONSULTATION'
+                                                                ? 'bg-green-50 text-green-600'
+                                                                : 'bg-amber-50 text-amber-600'
+                                                        }`}>
+                                                            {record.status.replace('_', ' ')}
+                                                        </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         {/* Onboarding Input Container Form */}
-                        <div style={{ backgroundColor: '#ffffff', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                        <div className="bg-white p-7 rounded-2xl border border-slate-200 shadow-sm">
                             {!isAdminLoggedIn ? (
-                                <div style={{ textAlign: 'center', padding: '20px' }}>
-                                    <h3 style={{ color: '#0f172a', marginBottom: '8px' }}>🔒 Protected Registration Space</h3>
-                                    <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>Please authenticate as an admin to register doctors.</p>
-                                    {authError && <div style={{ color: '#dc2626', backgroundColor: '#fee2e2', padding: '10px', borderRadius: '6px', marginBottom: '16px' }}>{authError}</div>}
-                                    <form onSubmit={handleAdminLogin} style={{ maxWidth: '360px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                        <input type="email" placeholder="admin@careflow.com" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                                        <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                                        <button type="submit" style={{ backgroundColor: '#2563eb', color: '#ffffff', padding: '10px', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Login as Admin</button>
+                                <div className="text-center py-5">
+                                    <h3 className="text-slate-900 font-bold mb-2 text-base">🔒 Protected Registration Space</h3>
+                                    <p className="text-slate-500 text-sm mb-5">Please authenticate as an admin to register doctors.</p>
+                                    {authError && <div className="text-rose-600 bg-rose-50 text-xs font-semibold p-3 rounded-lg mb-4">{authError}</div>}
+                                    <form onSubmit={handleAdminLogin} className="max-w-[360px] mx-auto flex flex-col gap-3">
+                                        <input type="email" placeholder="admin@careflow.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="p-2.5 rounded-lg border border-slate-300 text-sm focus:border-blue-500 outline-none" />
+                                        <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required className="p-2.5 rounded-lg border border-slate-300 text-sm focus:border-blue-500 outline-none" />
+                                        <button type="submit" className="bg-blue-600 text-white p-2.5 rounded-lg font-bold text-sm cursor-pointer transition-colors hover:bg-blue-700">Login as Admin</button>
                                     </form>
                                 </div>
                             ) : (
                                 <>
-                                    <h3 style={{ margin: '0 0 20px 0', color: '#0f172a', fontSize: '18px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>🩺 Register New Medical Practitioner</h3>
-                                    {regSuccess && <div style={{ color: '#16a34a', backgroundColor: '#dcfce7', padding: '12px', borderRadius: '6px', marginBottom: '16px' }}>{regSuccess}</div>}
-                                    {regError && <div style={{ color: '#dc2626', backgroundColor: '#fee2e2', padding: '12px', borderRadius: '6px', marginBottom: '16px' }}>{regError}</div>}
-                                    <form onSubmit={handleDoctorRegistration} style={{ display: 'grid', gap: '16px' }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                            <input type="text" placeholder="First Name" value={docFirstName} onChange={(e) => setDocFirstName(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                                            <input type="text" placeholder="Last Name" value={docLastName} onChange={(e) => setDocLastName(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                                    <h3 className="m-0 mb-5 text-slate-900 text-lg font-bold border-b border-slate-100 pb-3">🩺 Register New Medical Practitioner</h3>
+                                    {regSuccess && <div className="text-green-600 bg-green-50 text-xs font-semibold p-3 rounded-lg mb-4">{regSuccess}</div>}
+                                    {regError && <div className="text-rose-600 bg-rose-50 text-xs font-semibold p-3 rounded-lg mb-4">{regError}</div>}
+                                    <form onSubmit={handleDoctorRegistration} className="grid gap-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <input type="text" placeholder="First Name" value={docFirstName} onChange={(e) => setDocFirstName(e.target.value)} required className="p-2.5 rounded-lg border border-slate-300 text-sm focus:border-blue-500 outline-none" />
+                                            <input type="text" placeholder="Last Name" value={docLastName} onChange={(e) => setDocLastName(e.target.value)} required className="p-2.5 rounded-lg border border-slate-300 text-sm focus:border-blue-500 outline-none" />
                                         </div>
-                                        <input type="email" placeholder="Email Address" value={docEmail} onChange={(e) => setDocEmail(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                                        <input type="password" placeholder="Access Password" value={docPassword} onChange={(e) => setDocPassword(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                            <input type="text" placeholder="Telephone" value={docPhone} onChange={(e) => setDocPhone(e.target.value)} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                                            <input type="text" placeholder="License No" value={docLicense} onChange={(e) => setDocLicense(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                                        <input type="email" placeholder="Email Address" value={docEmail} onChange={(e) => setDocEmail(e.target.value)} required className="p-2.5 rounded-lg border border-slate-300 text-sm focus:border-blue-500 outline-none" />
+                                        <input type="password" placeholder="Access Password" value={docPassword} onChange={(e) => setDocPassword(e.target.value)} required className="p-2.5 rounded-lg border border-slate-300 text-sm focus:border-blue-500 outline-none" />
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <input type="text" placeholder="Telephone" value={docPhone} onChange={(e) => setDocPhone(e.target.value)} className="p-2.5 rounded-lg border border-slate-300 text-sm focus:border-blue-500 outline-none" />
+                                            <input type="text" placeholder="License No" value={docLicense} onChange={(e) => setDocLicense(e.target.value)} required className="p-2.5 rounded-lg border border-slate-300 text-sm focus:border-blue-500 outline-none" />
                                         </div>
-                                        <select value={docSpecialization} onChange={(e) => setDocSpecialization(e.target.value)} required style={{ padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff' }}>
+                                        <select value={docSpecialization} onChange={(e) => setDocSpecialization(e.target.value)} required className="p-2.5 rounded-lg border border-slate-300 text-sm bg-white focus:border-blue-500 outline-none text-slate-700 font-medium">
                                             <option value="">-- Select Specialization --</option>
                                             <option value="General Practitioner">General Practitioner (OPD)</option>
                                             <option value="Cardiologist">Cardiologist</option>
                                             <option value="Pediatrician">Pediatrician</option>
                                             <option value="Neurologist">Neurologist</option>
                                         </select>
-                                        <button type="submit" style={{ backgroundColor: '#16a34a', color: '#ffffff', padding: '12px', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Add Practitioner Profile</button>
+                                        <button type="submit" className="bg-green-600 text-white p-3 rounded-lg font-bold text-sm cursor-pointer transition-colors hover:bg-green-700 mt-2">Add Practitioner Profile</button>
                                     </form>
                                 </>
                             )}
                         </div>
                     </div>
 
-                    {/* Right Column Core Side Widgets */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {/* Right Column Core Side Widgets (Spans 1 column) */}
+                    <div className="flex flex-col gap-5">
 
                         {/* Streamlined Live Terminal Monitor Deck */}
-                        <div style={{ backgroundColor: '#2563eb', padding: '24px', borderRadius: '16px', color: '#ffffff', boxShadow: '0 4px 12px rgba(37,99,235,0.15)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                <span style={{ fontWeight: '700', fontSize: '14px', letterSpacing: '0.5px', opacity: 0.9 }}>📢 Live Terminal Status</span>
-                                <span style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700' }}>Active Node</span>
+                        <div className="bg-blue-600 p-6 rounded-2xl color text-white shadow-md shadow-blue-600/10">
+                            <div className="flex justify-between items-center mb-5">
+                                <span className="font-bold text-xs tracking-wider opacity-90 uppercase">📢 Live Terminal Status</span>
+                                <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase">Active Node</span>
                             </div>
 
-                            <div style={{ textAlign: 'center', margin: '24px 0' }}>
-                                <span style={{ fontSize: '11px', opacity: 0.75, letterSpacing: '1px', fontWeight: '700', textTransform: 'uppercase' }}>In Consultation Patient</span>
-                                <h3 style={{ margin: '6px 0 14px 0', fontSize: '26px', fontWeight: '800' }}>{activePatientName}</h3>
-                                <div style={{ display: 'inline-block', backgroundColor: '#ffffff', color: '#2563eb', padding: '6px 20px', borderRadius: '30px', fontWeight: '800', fontSize: '16px' }}>
+                            <div className="text-center my-6">
+                                <span className="text-[10px] opacity-75 tracking-wider font-bold uppercase">In Consultation Patient</span>
+                                <h3 className="m-0 mt-1 mb-3.5 text-2xl font-black tracking-tight">{activePatientName}</h3>
+                                <div className="inline-block bg-white text-blue-600 px-5 py-1.5 rounded-full font-extrabold text-sm shadow-sm">
                                     Token {activeToken === 'None' ? 'None' : `#${activeToken}`}
                                 </div>
                             </div>
 
-                            {/* Guard-rail: Button becomes fully disabled if waiting count reaches absolute zero */}
                             <button
                                 onClick={handleCallNextPatient}
                                 disabled={!isAdminLoggedIn || waitingCount === 0}
-                                style={{
-                                    width: '100%',
-                                    padding: '14px',
-                                    backgroundColor: (isAdminLoggedIn && waitingCount > 0) ? '#ffffff' : '#cbd5e1',
-                                    color: (isAdminLoggedIn && waitingCount > 0) ? '#2563eb' : '#94a3b8',
-                                    border: 'none',
-                                    borderRadius: '12px',
-                                    fontWeight: '700',
-                                    fontSize: '14px',
-                                    cursor: (isAdminLoggedIn && waitingCount > 0) ? 'pointer' : 'not-allowed',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '8px',
-                                    transition: 'all 0.2s'
-                                }}
+                                className={`w-full p-3.5 rounded-xl font-bold text-xs tracking-wide flex items-center justify-center gap-2 transition-all duration-200 border-none ${
+                                    (isAdminLoggedIn && waitingCount > 0)
+                                        ? 'bg-white text-blue-600 cursor-pointer hover:bg-slate-50'
+                                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                }`}
                             >
                                 👤+ CALL NEXT PATIENT
                             </button>
                         </div>
 
                         {/* Summary Analytics Deck Cards */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                            <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '16px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
-                                <span style={{ fontSize: '24px' }}>🕒</span>
-                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', margin: '6px 0 2px 0' }}>Total Waiting</div>
-                                <div style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>{waitingCount} Patients</div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-white p-5 rounded-2xl text-center border border-slate-200 shadow-sm">
+                                <span className="text-2xl">🕒</span>
+                                <div className="text-[10px] color text-slate-400 font-bold uppercase mt-1.5 mb-0.5 tracking-wider">Total Waiting</div>
+                                <div className="text-base font-extrabold text-slate-900">{waitingCount} Patients</div>
                             </div>
-                            <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '16px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
-                                <span style={{ fontSize: '24px' }}>👨‍⚕️</span>
-                                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', margin: '6px 0 2px 0' }}>Served Today</div>
-                                <div style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>{servedTodayCount} Patients</div>
+                            <div className="bg-white p-5 rounded-2xl text-center border border-slate-200 shadow-sm">
+                                <span className="text-2xl">👨‍⚕️</span>
+                                <div className="text-[10px] color text-slate-400 font-bold uppercase mt-1.5 mb-0.5 tracking-wider">Served Today</div>
+                                <div className="text-base font-extrabold text-slate-900">{servedTodayCount} Patients</div>
                             </div>
                         </div>
 
                         {/* Extended Operations Analytics Box */}
-                        <div style={{ backgroundColor: '#ffffff', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                            <h4 style={{ margin: '0 0 14px 0', fontSize: '13px', color: '#475569', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px' }}>📈 Operational Velocity Metrics</h4>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
-                                <span style={{ color: '#64748b', fontWeight: '500' }}>Active Medical Staff:</span>
-                                <span style={{ color: '#0f172a', fontWeight: '700' }}>{doctorsList.length} Consultants</span>
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                            <h4 className="m-0 mb-3 text-xs text-slate-500 uppercase font-bold tracking-wider">📈 Operational Velocity</h4>
+                            <div className="flex justify-between py-2.5 border-b border-slate-100 text-xs">
+                                <span className="text-slate-400 font-medium">Active Medical Staff:</span>
+                                <span className="text-slate-800 font-bold">{doctorsList.length} Consultants</span>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
-                                <span style={{ color: '#64748b', fontWeight: '500' }}>Avg Consultation Time:</span>
-                                <span style={{ color: '#16a34a', fontWeight: '700' }}>{avgConsultTime}</span>
+                            <div className="flex justify-between py-2.5 border-b border-slate-100 text-xs">
+                                <span className="text-slate-400 font-medium">Avg Consultation Time:</span>
+                                <span className="text-green-600 font-bold">{avgConsultTime}</span>
                             </div>
 
                             {/* Live System Operation Logs */}
-                            <div style={{ marginTop: '16px' }}>
-                                <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase' }}>Live System Logs</span>
-                                <div style={{ backgroundColor: '#f8fafc', padding: '10px', borderRadius: '8px', marginTop: '6px', fontSize: '12px', color: '#475569', maxHeight: '80px', overflowY: 'auto', fontFamily: 'monospace' }}>
+                            <div className="mt-4">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Live System Logs</span>
+                                <div className="bg-slate-50 p-2.5 rounded-lg mt-1.5 text-xs text-slate-600 max-h-[80px] overflow-y-auto font-mono leading-relaxed border border-slate-100">
                                     {systemLogs.length === 0 ? (
-                                        <div>[SYSTEM]: Awaiting queue events...</div>
+                                        <div className="text-slate-400 font-medium">[SYSTEM]: Awaiting queue events...</div>
                                     ) : (
-                                        systemLogs.map((log, i) => <div key={i} style={{ marginBottom: '4px' }}>{log}</div>)
+                                        systemLogs.map((log, i) => <div key={i} className="mb-1 last:mb-0">{log}</div>)
                                     )}
                                 </div>
                             </div>

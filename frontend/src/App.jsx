@@ -1,31 +1,62 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout';
-import DoctorDirectory from './pages/DoctorDirectory';
-import BookingPage from './pages/BookingPage';
-import PatientProfile from './pages/PatientProfile';
-import AdminDashboard from './pages/AdminDashboard';
-import Notifications from './pages/Notifications';
-import MyProfile from "./pages/MyProfile";
-import MedicalDashboard from "./pages/MedicalDashboard";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-function App() {
+// Layout & Shared Components
+import Layout from './components/Layout';
+
+// Authentication Gateways (Fullscreen)
+import Login from './pages/StaffLogin';
+import PatientLogin from './PatientLogin';
+import Register from './Register';
+import PatientAuth from './pages/PatientAuth';
+
+// Core Sub-View Pages
+import DoctorDirectory from './pages/DoctorDirectory';
+import DoctorDashboard from './pages/DoctorDashboard';
+import AdminDashboard from './pages/AdminDashboard';
+import PatientDashboard from './PatientDashboard';
+import Notifications from './pages/Notifications';
+
+// Appointment Module Components
+import Booking from './pages/BookingPage';
+import BookAppointment from './components/BookAppointment';
+import PatientAppointmentModule from './components/PatientAppointmentModule';
+import ManageAppointments from './components/ManageAppointments';
+
+export default function App() {
     return (
-        <BrowserRouter>
-            {/* Removed standalone navbar from here to stop the double header bug */}
+        <Router>
             <Routes>
+                {/* 🔐 Public Fullscreen Auth Gateways (Bypasses Layout Overlays) */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/patient-login" element={<PatientLogin />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/patient-auth" element={<PatientAuth />} />
+
+                {/* 🏥 Unified System Core Frame inside our clean Layout Component */}
                 <Route path="/" element={<Layout />}>
-                    <Route index element={<MyProfile />} />
+                    {/* Default fallback route inside layout */}
+                    <Route index element={<Navigate to="/doctors" replace />} />
+
+                    {/* 🩺 Doctor & Admin Management Module Paths */}
                     <Route path="doctors" element={<DoctorDirectory />} />
-                    <Route path="booking" element={<BookingPage />} />
-                    <Route path="profile" element={<PatientProfile />} />
+                    <Route path="doctor-dashboard" element={<DoctorDashboard />} />
                     <Route path="admin" element={<AdminDashboard />} />
+
+                    {/* 👤 Patient Profile Module Paths */}
+                    <Route path="patient-dashboard" element={<PatientDashboard />} />
                     <Route path="notifications" element={<Notifications />} />
-                    <Route path="dashboard" element={<MedicalDashboard />} />
+
+                    {/* 📅 Appointment Engine Module Paths */}
+                    <Route path="booking" element={<Booking />} />
+                    <Route path="book-appointment" element={<BookAppointment />} />
+                    <Route path="appointments" element={<PatientAppointmentModule />} />
+                    <Route path="manage-appointments" element={<ManageAppointments />} />
                 </Route>
+
+                {/* 🔄 Fallback Catch-All Redirect Engine Rule */}
+                <Route path="*" element={<Navigate to="/doctors" replace />} />
             </Routes>
-        </BrowserRouter>
+        </Router>
     );
 }
-
-export default App;

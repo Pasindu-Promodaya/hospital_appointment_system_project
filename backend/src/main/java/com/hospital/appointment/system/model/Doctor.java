@@ -2,6 +2,7 @@ package com.hospital.appointment.system.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.*;
 
 @Entity
@@ -12,13 +13,14 @@ import lombok.*;
 @AllArgsConstructor
 public class Doctor {
 
-    // primary key for doctor table
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    // ⛓️ Link with LAZY fetching and JSON reference protection
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @JsonManagedReference
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
     @Column(name = "first_name", nullable = false)
@@ -30,7 +32,7 @@ public class Doctor {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(name = "telephone_number")
@@ -42,14 +44,15 @@ public class Doctor {
     @Column(name = "specialty", nullable = false)
     private String specialty;
 
-    @Column(name = "license_number", nullable = false)
+    @Column(name = "license_number", unique = true, nullable = false)
     private String licenseNumber;
 
     @Column(nullable = false)
-    private String availability = "Available"; // sets default value to satisfy database constraint
+    private String availability = "Available";
 
-    @Column(name = "is_active")
-    private Boolean activeStatus = true; // renamed variable to bypass filter glitch
+    // Renamed variable to bypass filter glitch + Boxed Boolean to accept nulls cleanly
+    @Column(name = "is_active", nullable = false)
+    private Boolean activeStatus = true;
 
     @Column(name = "created_by_admin_id")
     private Long createdByAdminId;
@@ -62,44 +65,28 @@ public class Doctor {
         this.createdAt = LocalDateTime.now();
     }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    // Custom constructor for manual instantiation if needed in services/tests
+    public Doctor(User user, String firstName, String lastName, String email, String telephoneNumber,
+                  String specialization, String specialty, String licenseNumber, Boolean activeStatus, Long createdByAdminId) {
+        this.user = user;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.name = "Dr. " + firstName + " " + lastName;
+        this.email = email;
+        this.telephoneNumber = telephoneNumber;
+        this.specialization = specialization;
+        this.specialty = specialty;
+        this.licenseNumber = licenseNumber;
+        this.activeStatus = activeStatus;
+        this.createdByAdminId = createdByAdminId;
+    }
 
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
+    // Explicit helper method for isActive configuration to support main branch compatibility
+    public Boolean getIsActive() {
+        return this.activeStatus;
+    }
 
-    public String getFirstName() { return firstName; }
-    public void setFirstName(String firstName) { this.firstName = firstName; }
-
-    public String getLastName() { return lastName; }
-    public void setLastName(String lastName) { this.lastName = lastName; }
-
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getTelephoneNumber() { return telephoneNumber; }
-    public void setTelephoneNumber(String telephoneNumber) { this.telephoneNumber = telephoneNumber; }
-
-    public String getSpecialization() { return specialization; }
-    public void setSpecialization(String specialization) { this.specialization = specialization; }
-
-    public String getSpecialty() { return specialty; }
-    public void setSpecialty(String specialty) { this.specialty = specialty; }
-
-    public String getLicenseNumber() { return licenseNumber; }
-    public void setLicenseNumber(String licenseNumber) { this.licenseNumber = licenseNumber; }
-
-    public String getAvailability() { return availability; }
-    public void setAvailability(String availability) { this.availability = availability; }
-
-    public Boolean getActiveStatus() { return activeStatus; }
-    public void setActiveStatus(Boolean activeStatus) { this.activeStatus = activeStatus; }
-
-    public Long getCreatedByAdminId() { return createdByAdminId; }
-    public void setCreatedByAdminId(Long createdByAdminId) { this.createdByAdminId = createdByAdminId; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setIsActive(Boolean isActive) {
+        this.activeStatus = isActive;
+    }
 }

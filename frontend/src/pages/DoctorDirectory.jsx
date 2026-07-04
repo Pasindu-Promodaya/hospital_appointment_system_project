@@ -1,148 +1,222 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-const DoctorDirectory = () => {
-  // 💡 Mock Data: This represents what your backend controller will send to this page later!
-  const [doctors, setDoctors] = useState([
-    { id: 1, name: "Dr. Sanduni Perera", specialization: "Cardiology", licenseNumber: "MC-98432", isActive: true },
-    { id: 2, name: "Dr. Himal Samarawickrama", specialization: "Neurology", licenseNumber: "MC-12743", isActive: true },
-    { id: 3, name: "Dr. Kanishka Silva", specialization: "Pediatrics", licenseNumber: "MC-45321", isActive: true }
-  ]);
+export default function DoctorDirectory() {
+    const [doctors, setDoctors] = useState([]);
+    const [specialty, setSpecialty] = useState('All');
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
-  const [searchSpecialty, setSearchSpecialty] = useState("");
+    const navigate = useNavigate();
+    const { user } = useAuth();
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      
-      {/* 1. Header & Summary Section */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h2 style={{ margin: '0 0 4px 0', color: 'var(--primary-dark)', fontSize: '24px', fontWeight: '700' }}>
-            Medical Practitioners Directory
-          </h2>
-          <p style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
-            Manage active hospital doctors, review medical licenses, and monitor channel schedules.
-          </p>
-        </div>
-        <button style={{
-          backgroundColor: 'var(--primary-blue)',
-          color: 'white',
-          border: 'none',
-          padding: '10px 18px',
-          borderRadius: '8px',
-          fontWeight: '600',
-          cursor: 'pointer',
-          boxShadow: '0 2px 4px rgba(2, 132, 199, 0.2)'
-        }}>
-          ➕ Add New Practitioner
-        </button>
-      </div>
+    const specialties = ['All', 'Cardiology', 'Neurology', 'Pediatrics', 'Dermatology', 'General Medicine'];
 
-      {/* 2. Advanced Filter Toolbar */}
-      <div style={{
-        backgroundColor: 'white',
-        padding: '16px 24px',
-        borderRadius: '12px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        display: 'flex',
-        gap: '16px',
-        alignItems: 'center'
-      }}>
-        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-main)' }}>🔍 Search Specialty:</span>
-        <input 
-          type="text" 
-          placeholder="e.g., Cardiology, Neurology..." 
-          value={searchSpecialty}
-          onChange={(e) => setSearchSpecialty(e.target.value)}
-          style={{
-            flex: 1,
-            padding: '10px 14px',
-            borderRadius: '8px',
-            border: '1px solid var(--border-color)',
-            fontSize: '14px',
-            outline: 'none'
-          }}
-        />
-      </div>
+    useEffect(() => {
+        setLoading(true);
 
-      {/* 3. Dynamic Interactive Grid Board */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-        gap: '20px'
-      }}>
-        {doctors
-          .filter(doc => doc.specialization.toLowerCase().includes(searchSpecialty.toLowerCase()))
-          .map((doctor) => (
-            <div 
-              key={doctor.id} 
-              style={{
-                backgroundColor: 'white',
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-                padding: '20px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                position: 'relative'
-              }}
-            >
-              {/* Active Duty Green Badge */}
-              <span style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                backgroundColor: '#f0fdf4',
-                color: '#16a34a',
-                fontSize: '12px',
-                fontWeight: '600',
-                padding: '4px 8px',
-                borderRadius: '6px'
-              }}>
-                ● Active Duty
-              </span>
+        const url = (specialty && specialty !== 'All')
+            ? `http://localhost:8080/api/doctors?specialty=${specialty}`
+            : 'http://localhost:8080/api/doctors';
 
-              <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContents: 'center', fontSize: '24px' }}>
-                👨‍⚕️
-              </div>
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                setDoctors(data);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Error fetching clinical directory:", err);
+                setLoading(false);
+            });
+    }, [specialty]);
 
-              <div>
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '18px', color: 'var(--primary-dark)' }}>{doctor.name}</h4>
-                <span style={{ 
-                  backgroundColor: '#f1f5f9', 
-                  color: '#475569', 
-                  fontSize: '12px', 
-                  fontWeight: '600', 
-                  padding: '4px 8px', 
-                  borderRadius: '6px' 
-                }}>
-                  {doctor.specialization}
-                </span>
-              </div>
+    const handleBookingClick = (doc) => {
+        const userRole = user?.role || localStorage.getItem('role');
+        const resolvedDoctorName = doc.name || `Dr. ${doc.firstName} ${doc.lastName}`;
 
-              <hr style={{ border: 'none', borderTop: '1px solid var(--border-color)', margin: '8px 0' }} />
+        const bookingContext = {
+            doctor: {
+                id: doc.id,
+                name: resolvedDoctorName,
+                specialization: doc.specialization
+            }
+        };
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#64748b' }}>
-                <span>📜 License: <strong>{doctor.licenseNumber}</strong></span>
-                <button style={{
-                  backgroundColor: 'transparent',
-                  color: 'var(--primary-blue)',
-                  border: '1px solid var(--primary-blue)',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  fontSize: '12px'
-                }}>
-                  View Slots
-                </button>
-              </div>
+        if (userRole === 'ROLE_PATIENT' || userRole === 'PATIENT') {
+            navigate('/book-appointment', { state: bookingContext });
+        } else {
+            navigate('/patient-login', {
+                state: {
+                    fromBooking: true,
+                    redirectTo: '/book-appointment',
+                    ...bookingContext
+                }
+            });
+        }
+    };
+
+    const filteredDoctors = doctors.filter(doc => {
+        const fullName = (doc.name || `${doc.firstName} ${doc.lastName}`).toLowerCase();
+        return fullName.includes(searchTerm.toLowerCase());
+    });
+
+    return (
+        <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 antialiased">
+
+            {/* 🌌 Premium Hero Banner Segment */}
+            <div className="relative bg-[#0b1329] bg-gradient-to-br from-[#0f172a] via-[#0b1329] to-[#1e1b4b] py-20 px-6 text-center shadow-xl shadow-slate-950/20">
+                <div className="max-w-4xl mx-auto flex flex-col items-center">
+          <span className="inline-flex items-center gap-1.5 bg-sky-500/10 text-sky-400 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wider border border-sky-500/20 shadow-sm">
+            Core Health Healthcare Gateway
+          </span>
+
+                    <h1 className="text-4xl md:text-5xl font-black mt-5 mb-3 tracking-tight text-white leading-[1.15]">
+                        Find & Book World-Class Specialists
+                    </h1>
+
+                    <p className="text-slate-400 text-sm md:text-base max-w-2xl mx-auto leading-relaxed font-medium">
+                        Search verified physicians, compare specialties, and reserve clinical consultation slots through one enterprise-grade healthcare gateway.
+                    </p>
+
+                    {/* 🔍 Streamlined Search Input Bar */}
+                    <div className="mt-10 w-full max-w-2xl bg-white p-2 rounded-full shadow-2xl shadow-black/40 flex items-center border border-slate-200/50">
+                        <div className="flex items-center gap-3 pl-4 flex-1">
+                            <svg className="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input
+                                type="text"
+                                placeholder="Search Doctor by Name..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full bg-transparent border-none text-slate-800 placeholder-slate-400 text-sm font-medium focus:outline-none"
+                            />
+                        </div>
+                        <button className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase tracking-wider px-7 py-3.5 rounded-full transition duration-150 ease-in-out shadow-lg shadow-blue-500/20">
+                            Search
+                        </button>
+                    </div>
+                </div>
             </div>
-          ))}
-      </div>
 
-    </div>
-  );
-};
+            {/* 🏢 Main Layout Container */}
+            <div className="max-w-[1240px] mx-auto py-16 px-6">
 
-export default DoctorDirectory;
+                {/* Section Header */}
+                <div className="text-center mb-10">
+                    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900">
+                        Verified clinical specialists, ready to see you
+                    </h2>
+                    <p className="text-slate-500 text-xs md:text-sm max-w-xl mx-auto mt-2 leading-relaxed font-medium">
+                        Every profile is license-checked, clinic-affiliated, and supported by Core Health's secure appointment gateway.
+                    </p>
+                </div>
+
+                {/* 💊 Specialty Filter Tabs */}
+                <div className="flex justify-center gap-2 flex-wrap mb-12 bg-white border border-slate-200/60 p-1.5 rounded-full max-w-2xl mx-auto shadow-sm shadow-slate-100">
+                    {specialties.map((spec) => (
+                        <button
+                            key={spec}
+                            onClick={() => { setSpecialty(spec); setSearchTerm(''); }}
+                            className={`px-5 py-2 rounded-full font-bold text-xs tracking-wide transition-all duration-200 ease-in-out ${
+                                specialty === spec
+                                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10'
+                                    : 'text-slate-500 hover:text-slate-800 bg-transparent'
+                            }`}
+                        >
+                            {spec}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Grid Display */}
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-3">
+                        <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-pulse animate-spin"></div>
+                        <div className="text-sm font-bold text-slate-400 tracking-wide">Syncing medical database entries...</div>
+                    </div>
+                ) : filteredDoctors.length === 0 ? (
+                    <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300 max-w-xl mx-auto p-8 shadow-sm">
+                        <div className="text-4xl mb-3">🍃</div>
+                        <h4 className="text-base font-bold text-slate-800">No Specialists Found</h4>
+                        <p className="text-xs text-slate-400 mt-1">No clinical profiles match your active specialty filters.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {filteredDoctors.map((doc) => (
+                            <div key={doc.id} className="bg-white rounded-[24px] border border-slate-200 p-6 shadow-sm hover:shadow-xl hover:border-slate-300/80 transition-all duration-300 flex flex-col justify-between group">
+                                <div>
+                                    <div className="flex items-start gap-4 mb-4">
+                                        <div className="w-14 h-14 rounded-2xl bg-blue-50/80 border border-blue-100 flex items-center justify-center text-2xl shrink-0 transition duration-200 group-hover:scale-105">
+                                            👨‍⚕️
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                <h3 className="text-base font-extrabold text-slate-900 tracking-tight leading-tight">
+                                                    {doc.name || `Dr. ${doc.firstName} ${doc.lastName}`}
+                                                </h3>
+                                                <span className="inline-flex items-center gap-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100 shadow-sm shrink-0">
+                          🛡️ Verified License
+                        </span>
+                                            </div>
+                                            <div className="pt-1">
+                        <span className="inline-block bg-blue-50/50 text-blue-700 text-[11px] font-bold px-2.5 py-1 rounded-md border border-blue-100/40">
+                          {doc.specialization}
+                        </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid bg-[#f8fafc] border border-slate-100 p-4 rounded-xl space-y-2.5 mb-6">
+                                        <div className="flex items-center justify-between text-xs text-slate-500">
+                                            <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">License Number</span>
+                                            <span className="text-slate-800 font-mono font-bold bg-white px-2 py-0.5 rounded border border-slate-200/60">
+                        {doc.licenseNumber || doc.license_number || 'Pending'}
+                      </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs text-slate-500 overflow-hidden">
+                                            <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px] shrink-0">Contact Email</span>
+                                            <span className="text-slate-700 font-medium truncate pl-4 max-w-[180px]">
+                        {doc.email}
+                      </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => handleBookingClick(doc)}
+                                    className="w-full py-3.5 rounded-xl border-none bg-[#0f172a] hover:bg-blue-600 text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-all duration-200 shadow-slate-950/10 cursor-pointer"
+                                >
+                                    Book Consultation Slot
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* 📊 Metrics Banner */}
+                <div className="mt-16 bg-[#0f172a] bg-gradient-to-r from-[#0f172a] to-[#1e1b4b] rounded-3xl p-8 shadow-xl text-white grid grid-cols-2 md:grid-cols-4 gap-6 text-center border border-slate-800/40">
+                    <div>
+                        <h4 className="text-2xl md:text-3xl font-black tracking-tight text-white">+15</h4>
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mt-1">Verified Doctors</p>
+                    </div>
+                    <div>
+                        <h4 className="text-2xl md:text-3xl font-black tracking-tight text-white">99.4%</h4>
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mt-1">Patient Satisfaction</p>
+                    </div>
+                    <div>
+                        <h4 className="text-2xl md:text-3xl font-black tracking-tight text-white">24/7</h4>
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mt-1">Care Support</p>
+                    </div>
+                    <div>
+                        <h4 className="text-2xl md:text-3xl font-black tracking-tight text-white">1</h4>
+                        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mt-1">Clinical Branches</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    );
+}
