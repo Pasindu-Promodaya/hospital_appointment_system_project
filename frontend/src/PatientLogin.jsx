@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom"; // 🎯 Catch router state memory
 import axios from "axios";
 import { useAuth } from "./context/AuthContext";
 
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation(); // 🎯 Initialize location reader
 
   // State configurations
   const [email, setEmail] = useState("");
@@ -19,7 +20,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // 🎯 FIX 1: Pointed directly to your isolated split patient login endpoint routing
+      // 🎯 Pointed directly to your isolated split patient login endpoint routing
       const response = await axios.post("http://localhost:8080/api/auth/login/patient", {
         email: email,
         password: password,
@@ -39,11 +40,21 @@ const Login = () => {
         // Safely map verification tokens into your dynamic global context layer
         login(sessionPayload);
 
-        // 🎯 FIX 2: Explicitly persist payload properties so the Dashboard reads it perfectly on mount
+        // Explicitly persist payload properties so the Dashboard reads it perfectly on mount
         localStorage.setItem("userSession", JSON.stringify(sessionPayload));
 
-        // 🎯 FIX 3: Clean navigation routing straight to the patient dashboard node route mapping
-        navigate("/dashboard");
+        // 🎯 Check if they arrived via a public booking redirect route
+        if (location.state?.fromBooking && location.state?.doctor) {
+          // 🎯 FIXED: Reroute them to the correct active path parameter matching your App router tree exactly
+          const targetPath = location.state.redirectTo || "/appointments";
+          
+          navigate(targetPath, { 
+            state: { doctor: location.state.doctor } 
+          });
+        } else {
+          // 🎯 FIXED: Updated normal landing dashboard path route destination name pattern
+          navigate("/patient-dashboard");
+        }
       }
     } catch (err) {
       console.error("Login System Error:", err);

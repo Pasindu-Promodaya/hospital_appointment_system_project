@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-
+import axios from "axios"; 
 const PatientDashboard = () => {
   const [userId, setUserId] = useState(null);
   const [patient, setPatient] = useState(null);
@@ -216,9 +215,20 @@ const PatientDashboard = () => {
                 </div>
               </div>
 
+              {/* 🎯 INTEGRATED: Action Button pointing to the Appointments Module Interface Grid */}
+              <button
+                onClick={() => navigate("/manage-appointments")}
+                className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-3 px-4 rounded-xl transition duration-150 ease-in-out shadow-md shadow-blue-500/10 flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" />
+                </svg>
+                Manage My Appointments
+              </button>
+
               <button
                 onClick={() => setIsEditing(true)}
-                className="w-full mt-6 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-4 rounded-xl transition duration-150 ease-in-out shadow-sm text-sm flex items-center justify-center gap-2"
+                className="w-full mt-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-4 rounded-xl transition duration-150 ease-in-out shadow-sm text-sm flex items-center justify-center gap-2"
               >
                 Modify patient's profile
               </button>
@@ -253,7 +263,6 @@ const PatientDashboard = () => {
                 </div>
               </div>
 
-              {/* Added View Section for Emergency Contact */}
               <div className="bg-white border border-slate-200/70 rounded-2xl shadow-sm overflow-hidden">
                 <div className="px-5 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
                   <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600 border border-blue-100">
@@ -270,7 +279,6 @@ const PatientDashboard = () => {
             </div>
           </div>
         ) : (
-          /* 🎯 FIX: Form Layout Hydrated with All Custom Input Fields */
           <div className="max-w-3xl mx-auto bg-white border border-slate-200/80 rounded-2xl shadow-sm p-8">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
               <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
@@ -283,7 +291,6 @@ const PatientDashboard = () => {
             </div>
 
             <form onSubmit={handleSave} className="space-y-6">
-              {/* Row 1: First Name & Last Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">First Name</label>
@@ -295,7 +302,6 @@ const PatientDashboard = () => {
                 </div>
               </div>
 
-              {/* Row 2: Date of Birth & Blood Group */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Date of Birth</label>
@@ -317,7 +323,6 @@ const PatientDashboard = () => {
                 </div>
               </div>
 
-              {/* Row 3: Email & Telephone */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Email Address</label>
@@ -329,7 +334,6 @@ const PatientDashboard = () => {
                 </div>
               </div>
 
-              {/* Row 4: Gender & Emergency Contact */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Sex / Gender</label>
@@ -346,7 +350,6 @@ const PatientDashboard = () => {
                 </div>
               </div>
 
-              {/* Textareas: Allergies & Chronic Conditions */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-red-500 mb-1.5">Known Drug Allergies</label>
                 <textarea name="knownDrugAllergies" value={formData.knownDrugAllergies} onChange={handleChange} rows="2" className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none transition bg-slate-50/40 font-medium"></textarea>

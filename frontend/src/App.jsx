@@ -19,6 +19,7 @@ import PatientDashboard from './PatientDashboard';
 import Booking from './pages/BookingPage';
 import BookAppointment from './components/BookAppointment';
 import PatientAppointmentModule from './components/PatientAppointmentModule';
+import ManageAppointments from './components/ManageAppointments';
 
 export default function App() {
   return (
@@ -48,10 +49,12 @@ export default function App() {
                   {/* 👤 Patient Profile Module Paths */}
                   <Route path="/patient-dashboard" element={<PatientDashboard />} />
 
+
                   {/* 📅 Appointment Engine Module Paths */}
                   <Route path="/booking" element={<Booking />} />
                   <Route path="/book-appointment" element={<BookAppointment />} />
                   <Route path="/appointments" element={<PatientAppointmentModule />} />
+                  <Route path="/manage-appointments" element={<ManageAppointments />} />
 
                   {/* 🔄 Fallback Catch-All Redirect Engine Rule */}
                   <Route path="*" element={<Navigate to="/doctors" replace />} />

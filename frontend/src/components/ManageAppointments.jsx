@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 
 export default function ManageAppointments({ patientId }) {
-  const API_BASE_URL = '/api';
+  // 🎯 FIXED: Absolute path ensuring connection to your local Spring Boot server node
+  const API_BASE_URL = 'http://localhost:8080/api';
 
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,8 +21,28 @@ export default function ManageAppointments({ patientId }) {
 
   const fetchAppointments = () => {
     setLoading(true);
+    
+    // 🎯 SELF-HEALING BACKUP: If patientId isn't passed as a prop, dynamically resolve it from localStorage
+    let activeId = patientId;
+    if (!activeId) {
+      try {
+        const session = JSON.parse(localStorage.getItem("userSession") || "{}");
+        activeId = session.userId || session.id;
+      } catch (err) {
+        console.error("Failed to resolve session parameters:", err);
+      }
+    }
+
+    // Safeguard: If no ID can be found anywhere, break out of loading to prevent an endless spinner
+    if (!activeId) {
+      console.warn("ManageAppointments mounted without a valid Patient Identifier Context.");
+      setAppointments([]);
+      setLoading(false);
+      return;
+    }
+
     fetch(`${API_BASE_URL}/appointments/my-appointments`, {
-      headers: { 'X-Patient-Id': patientId }
+      headers: { 'X-Patient-Id': String(activeId) }
     })
       .then(async res => {
         if (!res.ok) {
@@ -41,6 +62,7 @@ export default function ManageAppointments({ patientId }) {
       });
   };
 
+  // 🎯 FIXED: Fires seamlessly on mount and updates whenever patientId properties switch
   useEffect(() => {
     fetchAppointments();
   }, [patientId]);
@@ -69,7 +91,7 @@ export default function ManageAppointments({ patientId }) {
         setFetchingSlots(false);
         showPopupMessage('error', 'Unable to fetch available time slots for the selected date.');
       });
-  }, [targetDate, reschedulingId]);
+  }, [targetDate, reschedulingId, appointments]);
 
   const showPopupMessage = (type, text) => {
     setCustomNotification({ visible: true, type, text });
@@ -83,11 +105,17 @@ export default function ManageAppointments({ patientId }) {
   const executeCancel = () => {
     if (!apptToCancel) return;
 
+    let activeId = patientId;
+    if (!activeId) {
+      const session = JSON.parse(localStorage.getItem("userSession") || "{}");
+      activeId = session.userId || session.id;
+    }
+
     fetch(`${API_BASE_URL}/appointments/${apptToCancel}/cancel`, {
       method: 'PUT',
       headers: { 
         'Content-Type': 'application/json',
-        'X-Patient-Id': patientId 
+        'X-Patient-Id': String(activeId) 
       }
     })
       .then(async res => {
@@ -112,11 +140,17 @@ export default function ManageAppointments({ patientId }) {
       return;
     }
 
+    let activeId = patientId;
+    if (!activeId) {
+      const session = JSON.parse(localStorage.getItem("userSession") || "{}");
+      activeId = session.userId || session.id;
+    }
+
     fetch(`${API_BASE_URL}/appointments/${appointmentId}/reschedule`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'X-Patient-Id': patientId
+        'X-Patient-Id': String(activeId)
       },
       body: JSON.stringify({ newDate: targetDate, newTimeSlot: selectedSlot })
     })
@@ -239,7 +273,7 @@ export default function ManageAppointments({ patientId }) {
                           </svg>
                           <span className="font-semibold text-slate-700">{appt.appointmentDate}</span>
                           <span className="text-slate-300">•</span>
-                          <strong>{appt.timeSlot.substring(0, 5)}</strong>
+                          <strong>{appt.timeSlot ? appt.timeSlot.substring(0, 5) : ''}</strong>
                         </div>
                       </div>
 

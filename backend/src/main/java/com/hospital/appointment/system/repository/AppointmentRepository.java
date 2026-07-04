@@ -28,12 +28,21 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query(value = "SELECT time_slot FROM appointments WHERE doctor_id = :doctorId AND appointment_date = :date AND status != 'CANCELLED'", nativeQuery = true)
     List<Object> findBookedSlotsByDoctorAndDate(@Param("doctorId") Long doctorId, @Param("date") LocalDate date);
 
-    // Getting appointment details from appoitments and doctors tables.
+    // Getting appointment details from appointments and doctors tables.
     @Query(value = "SELECT a.id, a.doctor_id, CONCAT(d.first_name, ' ', d.last_name) AS doctor_name, " +
-               "d.specialization, a.appointment_date, a.time_slot, a.token_number, a.queue_order, " +
-               "a.status, a.medical_problem " +
-               "FROM appointments a " +
-               "JOIN doctors d ON a.doctor_id = d.id " +
-               "WHERE a.patient_id = :patientId ORDER BY a.appointment_date DESC, a.time_slot DESC", nativeQuery = true)
+                   "d.specialization, a.appointment_date, a.time_slot, a.token_number, a.queue_order, " +
+                   "a.status, a.medical_problem " +
+                   "FROM appointments a " +
+                   "JOIN doctors d ON a.doctor_id = d.id " +
+                   "WHERE a.patient_id = :patientId ORDER BY a.appointment_date DESC, a.time_slot DESC", nativeQuery = true)
     List<Object[]> findAppointmentsWithDoctorDetails(@Param("patientId") Long patientId);
+
+    // 🎯 FIXED: Joined the 'patients' table instead of 'users' to grab the real personal profile fields
+    @Query(value = "SELECT a.id, a.token_number, CONCAT(p.first_name, ' ', p.last_name) AS patient_name, a.appointment_date, " +
+                   "a.time_slot, a.status, a.medical_problem, p.phone AS patient_phone, p.email AS patient_email " +
+                   "FROM appointments a " +
+                   "JOIN patients p ON a.patient_id = p.id " +
+                   "WHERE a.doctor_id = :doctorId AND a.appointment_date = :date " +
+                   "ORDER BY a.time_slot ASC", nativeQuery = true)
+    List<Object[]> findTodayQueueByDoctorAndDate(@Param("doctorId") Long doctorId, @Param("date") LocalDate date);
 }

@@ -20,14 +20,12 @@ const Navbar = () => {
   };
 
   const userRole = getActiveRole();
-  // 🎯 FIX: Defined globally at the top of the component so the utility bar can read it safely
   const sanitizedRole = String(userRole || '').trim().toUpperCase();
 
   const allMenuItems = [
     { path: '/doctor-dashboard', label: '👨‍⚕️ Doctor Portal', role: 'ROLE_DOCTOR', borderClass: 'hover:border-sky-600 active:border-sky-600', activeColor: '#0284c7' },
     { path: '/doctors', label: '⚕️ Doctors Directory', role: 'PUBLIC', borderClass: 'hover:border-sky-400 active:border-sky-400', activeColor: '#38bdf8' },
-    // 🎯 FIX: Ensured this is strictly set to 'ROLE_PATIENT' so guests can't view it
-    { path: '/booking', label: '📅 Book Appointments', role: 'ROLE_PATIENT', borderClass: 'hover:border-green-400 active:border-green-400', activeColor: '#4ade80' },
+    { path: '/book-appointment', label: '📅 Book Appointments', role: 'ROLE_PATIENT', borderClass: 'hover:border-green-400 active:border-green-400', activeColor: '#4ade80' },
     { path: '/patient-dashboard', label: '🩺 Patient Portal', role: 'ROLE_PATIENT', borderClass: 'hover:border-pink-400 active:border-pink-400', activeColor: '#f472b6' },
     { path: '/admin', label: '📊 Staff Roster', role: 'ROLE_ADMIN', borderClass: 'hover:border-amber-400 active:border-amber-400', activeColor: '#fbbf24' },
     { path: '/notifications', label: '🔔 Channel Alerts', role: 'ROLE_PATIENT_ALERTS', borderClass: 'hover:border-violet-400 active:border-violet-400', activeColor: '#a78bfa' }
@@ -35,29 +33,24 @@ const Navbar = () => {
 
   // 🌟 DYNAMIC FILTER ENGINE: Rules-based visibility matrix
   const visibleMenuItems = allMenuItems.filter(item => {
-    // Rule 1: Public items are unconditionally visible to everyone
-    if (item.role === 'PUBLIC') {
-      return true;
-    }
-
-    // Rule 2: If no active user session exists, explicitly reject all non-public items
+    // Rule 1: If no active user session exists, show ONLY public items
     if (!userRole || sanitizedRole === 'NULL' || sanitizedRole === '') {
       return item.role === 'PUBLIC';
     }
 
-    // Scenario B: Authorized Doctor Deck
+    // Scenario A: Authorized Doctor Deck -> Only display Doctor specific items
     if (sanitizedRole === 'ROLE_DOCTOR' || sanitizedRole === 'DOCTOR') {
       return item.role === 'ROLE_DOCTOR';
     }
 
-    // Scenario C: Hospital Administrator Panel
+    // Scenario B: Hospital Administrator Panel -> Only display Admin specific items
     if (sanitizedRole === 'ROLE_ADMIN' || sanitizedRole === 'ADMIN') {
       return item.role === 'ROLE_ADMIN';
     }
 
-    // Scenario d: Authenticated Patient Context
+    // Scenario C: Authenticated Patient Context -> Display Patient items + Public directory if wanted
     if (sanitizedRole === 'ROLE_PATIENT' || sanitizedRole === 'PATIENT') {
-      return item.role === 'ROLE_PATIENT' || item.role === 'ROLE_PATIENT_ALERTS';
+      return item.role === 'ROLE_PATIENT' || item.role === 'ROLE_PATIENT_ALERTS' || item.role === 'PUBLIC';
     }
 
     return false;
@@ -70,7 +63,7 @@ const Navbar = () => {
         <div className="flex gap-6 font-semibold">
           <span className="text-blue-600 border-b-2 border-blue-600 pb-2">
             {userRole && sanitizedRole !== 'NULL' && sanitizedRole !== '' 
-              ? `${userRole.replace('ROLE_', '')} Workspace` 
+              ? `${sanitizedRole.replace('ROLE_', '')} Workspace` 
               : 'Public Gateway'}
           </span>
         </div>

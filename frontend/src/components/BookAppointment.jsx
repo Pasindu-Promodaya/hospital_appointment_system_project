@@ -1,14 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom'; 
 
 export default function BookAppointment({ patientId }) {
-  const API_BASE_URL = '/api';
+  const API_BASE_URL = 'http://localhost:8080/api';
+  const location = useLocation(); 
+
+  // Extract variables from router redirect memory state fields
+  const redirectedDoctor = location.state?.doctor || null;
+  const initialDoctorId = redirectedDoctor?.id || '';
+  const initialSpecialization = redirectedDoctor?.specialization || '';
 
   const [specializations, setSpecializations] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
 
-  const [selectedSpecialization, setSelectedSpecialization] = useState('');
-  const [selectedDoctorId, setSelectedDoctorId] = useState('');
+  const [selectedSpecialization, setSelectedSpecialization] = useState(initialSpecialization);
+  const [selectedDoctorId, setSelectedDoctorId] = useState(initialDoctorId);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
   const [medicalProblem, setMedicalProblem] = useState('');
@@ -41,7 +48,28 @@ export default function BookAppointment({ patientId }) {
       .finally(() => setLoadingSpecializations(false));
   }, []);
 
-  // Fetch doctors whenever the selected specialty changes.
+  // Hydrate form options cleanly if redirected from directory with doctor info
+  useEffect(() => {
+    if (initialSpecialization) {
+      setSelectedSpecialization(initialSpecialization);
+      setSelectedDoctorId(String(initialDoctorId));
+      setSelectedDate('');
+      setAvailableSlots([]);
+
+      setLoadingDoctors(true);
+      fetch(`${API_BASE_URL}/appointments/doctors?specialization=${encodeURIComponent(initialSpecialization)}`)
+        .then(async res => {
+          if (!res.ok) throw new Error();
+          return res.json();
+        })
+        .then(data => {
+          setDoctors(Array.isArray(data) ? data : []);
+        })
+        .catch(() => console.error("Could not fetch secondary doctor parameters."))
+        .finally(() => setLoadingDoctors(false));
+    }
+  }, [initialSpecialization, initialDoctorId]);
+
   const handleSpecializationChange = (e) => {
     const spec = e.target.value;
     setSelectedSpecialization(spec);
@@ -72,7 +100,6 @@ export default function BookAppointment({ patientId }) {
     }
   };
 
-  // Reset the selected date and slot when the doctor changes.
   const handleDoctorChange = (e) => {
     setSelectedDoctorId(e.target.value);
     setSelectedDate('');
@@ -80,7 +107,6 @@ export default function BookAppointment({ patientId }) {
     setUiMessage({ type: '', text: '' });
   };
 
-  // Load the available time slots when the doctor and date are selected.
   const handleDateChange = (e) => {
     const date = e.target.value;
     setSelectedDate(date);
@@ -110,6 +136,12 @@ export default function BookAppointment({ patientId }) {
     }
   };
 
+  // 🎯 CLICK HANDLER: Triggered when a specific slot grid item button is pressed
+  const handleSlotSelection = (slot) => {
+    setSelectedTimeSlot(slot);
+    setUiMessage({ type: '', text: '' });
+  };
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     if (!selectedDoctorId || !selectedDate || !selectedTimeSlot) {
@@ -120,19 +152,31 @@ export default function BookAppointment({ patientId }) {
     setSubmitLoading(true);
     setUiMessage({ type: '', text: '' });
 
+    let activeId = patientId;
+    if (!activeId) {
+      try {
+        const session = JSON.parse(localStorage.getItem("userSession") || "{}");
+        activeId = session.id || session.userId || 1; 
+      } catch (err) {
+        activeId = 1;
+      }
+    }
+
+    const formattedTime = selectedTimeSlot.length === 5 ? `${selectedTimeSlot}:00` : selectedTimeSlot;
+    
     const payload = {
       doctorId: parseInt(selectedDoctorId),
       appointmentDate: selectedDate,
-      timeSlot: selectedTimeSlot.length === 5 ? `${selectedTimeSlot}:00` : selectedTimeSlot,
-      medicalProblem: medicalProblem.trim() || null,
+      appointmentTime: formattedTime, 
+      medicalProblem: medicalProblem.trim() || null
     };
 
-  try {
+    try {
       const response = await fetch(`${API_BASE_URL}/appointments/book`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Patient-Id': patientId
+          'X-Patient-Id': String(activeId)
         },
         body: JSON.stringify(payload)
       });
@@ -140,7 +184,7 @@ export default function BookAppointment({ patientId }) {
       const responseData = await response.json().catch(() => ({}));
 
       if (response.ok) {
-        setUiMessage({ type: 'success', text: responseData.message || 'Your clinical reservation has been confirmed and logged.' });
+        setUiMessage({ type: 'success', text: 'Your clinical reservation has been confirmed and logged successfully!' });
         setSelectedSpecialization('');
         setSelectedDoctorId('');
         setSelectedDate('');
@@ -149,7 +193,7 @@ export default function BookAppointment({ patientId }) {
         setAvailableSlots([]);
         setDoctors([]);
       } else {
-        setUiMessage({ type: 'error', text: responseData.message || 'The booking request was rejected by the service. Please review your selection and try again.' });
+        setUiMessage({ type: 'error', text: responseData.message || 'The booking request was rejected by the service. Please review your selection.' });
       }
     } catch {
       setUiMessage({ type: 'error', text: 'The booking service is unreachable right now. Please check connectivity and try again.' });
@@ -221,7 +265,7 @@ export default function BookAppointment({ patientId }) {
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <option value="">{loadingDoctors ? '-- Loading doctors --' : '-- Select Available Doctor --'}</option>
-                  {doctors.map(doc => <option key={doc.id} value={doc.id}>Dr. {doc.name}</option>)}
+                  {doctors.map(doc => <option key={doc.id} value={doc.id}>Dr. {doc.name || `${doc.firstName} ${doc.lastName}`}</option>)}
                 </select>
               </div>
 
@@ -254,7 +298,7 @@ export default function BookAppointment({ patientId }) {
                     <button
                       key={idx}
                       type="button"
-                      onClick={() => setSelectedTimeSlot(slot)}
+                      onClick={() => handleSlotSelection(slot)}
                       className={`rounded-2xl border px-3 py-3 text-xs font-semibold transition ${
                         selectedTimeSlot === slot
                           ? 'border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-600/20'

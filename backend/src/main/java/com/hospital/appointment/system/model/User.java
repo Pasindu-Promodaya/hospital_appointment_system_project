@@ -16,36 +16,27 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
-    // 🎯 INTEGRATED: Uses your teammate's column name 'password_hash' but keeps your variable name 'password' 
-    // to prevent breaking your code elsewhere in the application layer!
+    // 🎯 FIXED: Changed variable name to 'passwordHash' to align perfectly with Spring Data & Security models
     @Column(name = "password_hash", nullable = false)
-    private String password; 
+    private String passwordHash; 
 
     @Column(nullable = false)
-    private String role; // Holds descriptive tag strings (e.g., ROLE_PATIENT, ROLE_DOCTOR)
+    private String role; 
 
-    // 🧑‍💻 TEAMMATE'S PROPERTY: Automatically sets tracking timestamps upon database insert rows
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    /**
-     * ⛓️ YOUR DOCTOR GRAPH: Optional Bidirectional One-to-One mapping linking down to the doctor metadata table.
-     * Jackson loop-protection is preserved via @JsonBackReference.
-     */
     @OneToOne(fetch = FetchType.LAZY, mappedBy = "user")
     @JsonBackReference
     private Doctor doctor;
 
     // --- Constructors ---
-    
-    // 💡 Empty constructor required by Hibernate Reflection API
     public User() {}
 
-    // 🧑‍💻 Parameterized constructor for registration flows
-    public User(String email, String password, String role, Doctor doctor) {
+    public User(String email, String passwordHash, String role, Doctor doctor) {
         this.email = email;
-        this.password = password;
+        this.passwordHash = passwordHash;
         this.role = role;
         this.doctor = doctor;
     }
@@ -58,13 +49,13 @@ public class User {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
-    // Unified helper syntax mapping to prevent breaking your project files
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
+    // 🎯 INTEGRATION BRIDGE: Keeps standard getPassword() to satisfy Spring Security's UserDetails interface
+    public String getPassword() { return this.passwordHash; }
+    public void setPassword(String password) { this.passwordHash = password; }
 
-    // Teammate aliased getter/setter support hooks to ensure patient profiles match perfectly
-    public String getPasswordHash() { return password; }
-    public void setPasswordHash(String passwordHash) { this.password = passwordHash; }
+    // 🎯 ALIASED HOOKS: Maps cleanly to teammate's requirements 
+    public String getPasswordHash() { return this.passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }

@@ -9,7 +9,10 @@ public class AppointmentRequest {
     private LocalTime timeSlot;
     private String medicalProblem;
 
-    // Getters and Setters
+    // --- Constructors ---
+    public AppointmentRequest() {}
+
+    // --- Getters and Setters ---
     public Long getDoctorId() { return doctorId; }
     public void setDoctorId(Long doctorId) { this.doctorId = doctorId; }
 
@@ -18,6 +21,11 @@ public class AppointmentRequest {
 
     public LocalTime getTimeSlot() { return timeSlot; }
     public void setTimeSlot(LocalTime timeSlot) { this.timeSlot = timeSlot; }
+
+    // 🎯 THE INTEGRATION BRIDGE: Setter alias so Jackson can bind 'appointmentTime' payloads perfectly
+    public void setAppointmentTime(LocalTime appointmentTime) { 
+        this.timeSlot = appointmentTime; 
+    }
 
     public String getMedicalProblem() { return medicalProblem; }
     public void setMedicalProblem(String medicalProblem) { this.medicalProblem = medicalProblem; }

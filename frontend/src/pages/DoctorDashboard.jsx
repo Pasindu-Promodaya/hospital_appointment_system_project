@@ -1,31 +1,66 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-const STATIC_DOCTOR_FALLBACK = {
-  name: 'Dr. Himal Samarawickrama',
-  specialty: 'Neurology',
-  reg: 'MC-12743',
-  initials: 'HS',
-};
-
 const STATUS_STYLING = {
-  waiting: { label: 'Waiting', bg: 'bg-slate-100', color: 'text-slate-600' },
-  serving: { label: 'In Room', bg: 'bg-sky-100', color: 'text-sky-600' },
-  done: { label: 'Done', bg: 'bg-green-100', color: 'text-green-600' },
-  'no-show': { label: 'No-show', bg: 'bg-red-100', color: 'text-red-600' },
+  WAITING: { label: 'Waiting', bg: 'bg-slate-100', color: 'text-slate-600' },
+  SERVING: { label: 'In Room', bg: 'bg-sky-100', color: 'text-sky-600' },
+  DONE: { label: 'Done', bg: 'bg-green-100', color: 'text-green-600' },
+  NOSHOW: { label: 'No-show', bg: 'bg-red-100', color: 'text-red-600' },
 };
 
 function initials(fullName) {
-  const parts = fullName.split(' ').filter(Boolean);
+  if (!fullName) return 'DR';
+  const parts = fullName.replace(/^Dr\.\s*/i, '').split(' ').filter(Boolean);
   return parts.slice(0, 2).map((p) => p[0]).join('').toUpperCase();
 }
 
 export default function DoctorDashboard() {
   const { user } = useAuth();
-  const token = user?.token || localStorage.getItem('token');
-  
-  const activeDoctorId = user?.linkedDoctorId || user?.doctorId || 1;
-  const doctorDisplayName = user?.name || STATIC_DOCTOR_FALLBACK.name;
+
+  // 🎯 OMNI-PARSER: Unpacks credentials based on whatever pattern your staff auth layer outputs
+  const sessionCtx = useMemo(() => {
+    const session = { token: null, doctorId: null, email: null };
+
+    try {
+      if (user?.token) {
+        session.token = user.token;
+        session.doctorId = user.doctorId || user.id || user.linkedDoctorId;
+        session.email = user.email || user.username;
+        return session;
+      }
+
+      const flatToken = localStorage.getItem('token');
+      if (flatToken) {
+        session.token = flatToken;
+        session.doctorId = localStorage.getItem('doctorId') || localStorage.getItem('userId');
+        session.email = localStorage.getItem('email') || localStorage.getItem('username');
+        return session;
+      }
+
+      const userSessionStr = localStorage.getItem('userSession');
+      if (userSessionStr) {
+        const parsed = JSON.parse(userSessionStr);
+        session.token = parsed.token;
+        session.doctorId = parsed.doctorId || parsed.id || parsed.userId;
+        session.email = parsed.email || parsed.username;
+        return session;
+      }
+    } catch (e) {
+      console.error("Session lookup exception context:", e);
+    }
+    return session;
+  }, [user]);
+
+  const token = sessionCtx.token;
+  const loggedInEmail = sessionCtx.email;
+
+  // Dynamic status hooks tied to backend profile data
+  const [currentDoctorId, setCurrentDoctorId] = useState(sessionCtx.doctorId || null);
+  const [profileMeta, setProfileMeta] = useState({ 
+    name: "Medical Professional",
+    specialization: "Cardiology", 
+    licenseNumber: "Verified" 
+  });
 
   // Form States
   const [dayOfWeek, setDayOfWeek] = useState('Monday');
@@ -38,66 +73,107 @@ export default function DoctorDashboard() {
   const [selectedId, setSelectedId] = useState(null);
   const [isLoadingQueue, setIsLoadingQueue] = useState(true);
 
-  // 📡 FETCH QUEUE DATA FROM BACKEND
-  const fetchTodayQueue = async () => {
-    const activeToken = token || localStorage.getItem('token');
+  // 📡 STEP 1: RESOLVE REAL PROFILE INFORMATION VIA COMPLEMENTARY DIRECTORY LOOKUP
+  useEffect(() => {
+    if (!token) return;
 
-    if (!activeToken) {
+    fetch('http://localhost:8080/api/doctors')
+      .then(res => res.json())
+      .then(doctorsList => {
+        if (Array.isArray(doctorsList) && loggedInEmail) {
+          const matchedDoc = doctorsList.find(
+            doc => String(doc.email).toLowerCase().trim() === String(loggedInEmail).toLowerCase().trim()
+          );
+
+          if (matchedDoc) {
+            setCurrentDoctorId(matchedDoc.id);
+            setProfileMeta({
+              name: matchedDoc.name || `Dr. ${matchedDoc.firstName} ${matchedDoc.lastName}`,
+              specialization: matchedDoc.specialization || matchedDoc.specialty || 'Cardiology',
+              licenseNumber: matchedDoc.licenseNumber || matchedDoc.license_number || 'Verified'
+            });
+            return;
+          }
+        }
+        
+        // Fallback profile endpoint lookup if no explicit email row intersection maps out
+        const fallbackId = currentDoctorId || 1;
+        fetch(`http://localhost:8080/api/doctors/${fallbackId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data) {
+              setProfileMeta({
+                name: data.name || `Dr. ${data.firstName} ${data.lastName}`,
+                specialization: data.specialization || data.specialty || 'General Medicine',
+                licenseNumber: data.licenseNumber || data.license_number || 'MC-12743'
+              });
+              if (!currentDoctorId) setCurrentDoctorId(data.id);
+            }
+          });
+      })
+      .catch(err => console.error("Could not sync real database profile markers:", err));
+  }, [token, loggedInEmail]);
+
+  // 📡 STEP 2: FETCH LIVE APP QUEUE DATA VIA THE UPDATED CONTROLLER ENDPOINT PATH
+  const fetchTodayQueue = async () => {
+    if (!token || !currentDoctorId) {
       setIsLoadingQueue(false);
       return;
     }
 
-    setIsLoadingQueue(true);
     try {
-      const response = await fetch(`http://localhost:8080/api/doctors/${activeDoctorId}/queue`, {
+      // 🎯 CHANGED: Connected path parameter directly matching your appointment native controller structure
+      const response = await fetch(`http://localhost:8080/api/appointments/doctor-queue/${currentDoctorId}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${activeToken}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
       if (response.ok) {
         const data = await response.json();
-        setQueue(data);
-        const currentlyServing = data.find((p) => p.status === 'serving');
-        if (currentlyServing) setSelectedId(currentlyServing.id);
-      } else {
-        console.error('Failed to fetch queue stream. Status:', response.status);
+        setQueue(Array.isArray(data) ? data : []);
+        
+        const currentlyServing = data.find((p) => p.status?.toUpperCase() === 'SERVING');
+        if (currentlyServing && !selectedId) {
+          setSelectedId(currentlyServing.id);
+        }
       }
     } catch (error) {
-      console.error('Database connection network error:', error);
+      console.error('Queue synchronization network exception:', error);
     } finally {
       setIsLoadingQueue(false);
     }
   };
 
   useEffect(() => {
-    fetchTodayQueue();
-  }, [token, activeDoctorId]);
+    if (currentDoctorId) {
+      fetchTodayQueue();
+      const interval = setInterval(fetchTodayQueue, 10000); // Poll updates smoothly every 10 seconds
+      return () => clearInterval(interval);
+    }
+  }, [token, currentDoctorId]);
 
-  const serving = useMemo(() => queue.find((p) => p.status === 'serving'), [queue]);
-  const waitingList = useMemo(() => queue.filter((p) => p.status === 'waiting'), [queue]);
-  const seenToday = useMemo(() => queue.filter((p) => p.status === 'done').length, [queue]);
+  const serving = useMemo(() => queue.find((p) => p.status?.toUpperCase() === 'SERVING'), [queue]);
+  const waitingList = useMemo(() => queue.filter((p) => p.status?.toUpperCase() === 'WAITING'), [queue]);
+  const seenToday = useMemo(() => queue.filter((p) => p.status?.toUpperCase() === 'DONE').length, [queue]);
+  
   const selectedPatient = queue.find((p) => p.id === selectedId) || serving;
 
   // 📡 SAVE ROSTER SCHEDULING INTERVALS
   const handleSaveSchedule = async (e) => {
     e.preventDefault();
-    if (isSaving) return;
+    if (isSaving || !currentDoctorId) return;
 
     if (endTime <= startTime) {
       alert('⚠️ End time must be after start time.');
       return;
     }
 
-    const activeToken = token || localStorage.getItem('token');
-    if (!activeToken) {
-      alert('❌ Authentication expired. Please log in again.');
-      return;
-    }
-
     const scheduleData = {
-      doctor: { id: activeDoctorId },
+      doctor: { id: currentDoctorId },
       dayOfWeek: dayOfWeek,
       startTime: startTime + ":00", 
       endTime: endTime + ":00",
@@ -110,7 +186,7 @@ export default function DoctorDashboard() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${activeToken}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(scheduleData),
       });
@@ -131,11 +207,10 @@ export default function DoctorDashboard() {
   async function handleCallNext() {
     const nextPatient = waitingList[0];
     if (!nextPatient) return;
-    const activeToken = token || localStorage.getItem('token');
     try {
       const response = await fetch(`http://localhost:8080/api/appointments/${nextPatient.id}/next`, {
         method: 'PUT',
-        headers: { 'Authorization': `Bearer ${activeToken}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) fetchTodayQueue(); 
     } catch (error) {
@@ -146,11 +221,10 @@ export default function DoctorDashboard() {
   // ❌ REGISTER NO-SHOW 
   async function handleNoShow() {
     if (!serving) return;
-    const activeToken = token || localStorage.getItem('token');
     try {
       const response = await fetch(`http://localhost:8080/api/appointments/${serving.id}/no-show`, {
         method: 'PUT',
-        headers: { 'Authorization': `Bearer ${activeToken}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) fetchTodayQueue();
     } catch (error) {
@@ -167,12 +241,12 @@ export default function DoctorDashboard() {
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-sky-100 flex items-center justify-center text-xl font-bold text-sky-600">
-            {initials(doctorDisplayName)}
+            {initials(profileMeta.name)}
           </div>
           <div>
-            <h2 className="m-0 text-slate-800 text-22px font-bold">Welcome Back, {doctorDisplayName}</h2>
+            <h2 className="m-0 text-slate-800 text-2xl font-bold">Welcome Back, {profileMeta.name}</h2>
             <span className="inline-block bg-slate-100 text-slate-600 text-xs font-semibold px-2 py-1 rounded-md mt-1">
-              🔬 {STATIC_DOCTOR_FALLBACK.specialty} &middot; Registry: {STATIC_DOCTOR_FALLBACK.reg} (ID: {activeDoctorId})
+              🔬 {profileMeta.specialization} &middot; Registry: {profileMeta.licenseNumber} (ID: {currentDoctorId || 'Syncing...'})
             </span>
           </div>
         </div>
@@ -204,7 +278,7 @@ export default function DoctorDashboard() {
                 <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm outline-none bg-slate-50 text-slate-800 focus:border-blue-500" />
               </div>
             </div>
-            <button type="submit" disabled={isSaving} className={`w-full py-3 rounded-lg font-semibold text-sm mt-2 text-center transition-colors ${isSaving ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700 text-white cursor-pointer'}`}>
+            <button type="submit" disabled={isSaving || !currentDoctorId} className={`w-full py-3 rounded-lg font-semibold text-sm mt-2 text-center transition-colors ${isSaving || !currentDoctorId ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700 text-white cursor-pointer'}`}>
               {isSaving ? '⏳ Publishing...' : 'Publish Active Roster'}
             </button>
           </form>
@@ -223,7 +297,9 @@ export default function DoctorDashboard() {
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
               <div className="text-xs text-slate-400 font-semibold mb-1">Now Serving</div>
-              <div className="text-xl font-bold font-mono text-sky-600">{serving ? serving.ticket : '—'}</div>
+              <div className="text-xl font-bold font-mono text-sky-600">
+                {serving ? (serving.tokenNumber || serving.ticket || '—') : '—'}
+              </div>
             </div>
           </div>
 
@@ -235,9 +311,15 @@ export default function DoctorDashboard() {
             <div className="my-2">
               {serving ? (
                 <>
-                  <div className="font-mono text-3xl font-bold text-sky-400 tracking-wider">{serving.ticket}</div>
-                  <div className="text-base font-semibold mt-1">{serving.name}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">⏱️ {serving.time} &middot; {serving.reason}</div>
+                  <div className="font-mono text-3xl font-bold text-sky-400 tracking-wider">
+                    {serving.tokenNumber || serving.ticket || '01'}
+                  </div>
+                  <div className="text-base font-semibold mt-1">
+                    {serving.patientName || serving.name || 'Registered Patient'}
+                  </div>
+                  <div className="text-xs text-slate-400 mt-0.5">
+                    ⏱️ Time: {serving.appointmentTime || serving.time || '00:00'} &middot; Symptoms: {serving.medicalProblem || serving.reason || 'General Consultation'}
+                  </div>
                 </>
               ) : (
                 <div className="text-sm text-slate-400">No clinical patient in treatment room.</div>
@@ -264,13 +346,20 @@ export default function DoctorDashboard() {
               <div className="py-6 text-slate-400 text-sm text-center">No appointments booked today.</div>
             ) : (
               queue.map((patient) => {
-                const config = STATUS_STYLING[patient.status] || STATUS_STYLING.waiting;
+                const normalizedStatus = String(patient.status || '').toUpperCase().replace('-', '');
+                const config = STATUS_STYLING[normalizedStatus] || STATUS_STYLING.WAITING;
                 return (
                   <button key={patient.id} type="button" onClick={() => setSelectedId(patient.id)} className={`w-full flex items-center gap-4 px-5 py-3.5 text-left border-none border-b border-slate-50 cursor-pointer transition-colors ${patient.id === selectedId ? 'bg-green-50' : 'bg-transparent hover:bg-slate-50'}`}>
-                    <span className="font-mono text-xs font-bold text-slate-600 w-[70px]">{patient.ticket}</span>
+                    <span className="font-mono text-xs font-bold text-slate-600 w-[70px]">
+                      {patient.tokenNumber || patient.ticket || '—'}
+                    </span>
                     <div className="flex-1">
-                      <span className="block text-sm font-semibold text-slate-800">{patient.name}</span>
-                      <span className="block text-xs text-slate-400 mt-0.5">🕒 {patient.time}</span>
+                      <span className="block text-sm font-semibold text-slate-800">
+                        {patient.patientName || patient.name || 'Unknown Patient'}
+                      </span>
+                      <span className="block text-xs text-slate-400 mt-0.5">
+                        🕒 {patient.appointmentTime || patient.time || '—'}
+                      </span>
                     </div>
                     <span className={`text-[11px] font-semibold px-2 py-1 rounded-md min-w-[65px] text-center ${config.bg} ${config.color}`}>{config.label}</span>
                   </button>
@@ -285,21 +374,29 @@ export default function DoctorDashboard() {
           {selectedPatient ? (
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-3 border-b border-slate-100 pb-3.5">
-                <div className="w-11 h-11 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm">{initials(selectedPatient.name)}</div>
+                <div className="w-11 h-11 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm">
+                  {initials(selectedPatient.patientName || selectedPatient.name)}
+                </div>
                 <div>
-                  <div className="text-sm font-bold text-slate-800">{selectedPatient.name}</div>
-                  <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded mt-1 ${(STATUS_STYLING[selectedPatient.status] || STATUS_STYLING.waiting).bg} ${(STATUS_STYLING[selectedPatient.status] || STATUS_STYLING.waiting).color}`}>{ (STATUS_STYLING[selectedPatient.status] || STATUS_STYLING.waiting).label}</span>
+                  <div className="text-sm font-bold text-slate-800">
+                    {selectedPatient.patientName || selectedPatient.name || 'Unknown Patient'}
+                  </div>
+                  <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded mt-1 ${(STATUS_STYLING[String(selectedPatient.status).toUpperCase().replace('-', '')] || STATUS_STYLING.WAITING).bg} ${(STATUS_STYLING[String(selectedPatient.status).toUpperCase().replace('-', '')] || STATUS_STYLING.WAITING).color}`}>
+                    {(STATUS_STYLING[String(selectedPatient.status).toUpperCase().replace('-', '')] || STATUS_STYLING.WAITING).label}
+                  </span>
                 </div>
               </div>
               <div className="flex flex-col gap-2.5 text-xs">
-                <div className="flex justify-between border-b border-slate-50 pb-1.5"><span className="text-slate-400">Roster Ticket:</span><strong className="font-mono text-slate-700">{selectedPatient.ticket}</strong></div>
-                <div className="flex justify-between border-b border-slate-50 pb-1.5"><span className="text-slate-400">Time Allocation:</span><span className="text-slate-700 font-medium">{selectedPatient.time}</span></div>
-                <div className="flex justify-between border-b border-slate-50 pb-1.5"><span className="text-slate-400">Contact Number:</span><span className="text-sky-600">{selectedPatient.phone}</span></div>
-                <div className="flex justify-between pb-1"><span className="text-slate-400">Email Address:</span><span className="text-sky-600">{selectedPatient.email}</span></div>
+                <div className="flex justify-between border-b border-slate-50 pb-1.5"><span className="text-slate-400">Roster Ticket:</span><strong className="font-mono text-slate-700">{selectedPatient.tokenNumber || selectedPatient.ticket || '—'}</strong></div>
+                <div className="flex justify-between border-b border-slate-50 pb-1.5"><span className="text-slate-400">Time Allocation:</span><span className="text-slate-700 font-medium">{selectedPatient.appointmentTime || selectedPatient.time || '—'}</span></div>
+                <div className="flex justify-between border-b border-slate-50 pb-1.5"><span className="text-slate-400">Contact Number:</span><span className="text-sky-600">{selectedPatient.patientPhone || selectedPatient.phone || 'Not Provided'}</span></div>
+                <div className="flex justify-between pb-1"><span className="text-slate-400">Email Address:</span><span className="text-sky-600">{selectedPatient.patientEmail || selectedPatient.email || 'Not Provided'}</span></div>
               </div>
               <div className="border-t border-slate-100 pt-3.5 mt-1">
                 <span className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">Primary Symptoms</span>
-                <p className="m-0 text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 italic">"{selectedPatient.reason}"</p>
+                <p className="m-0 text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 italic">
+                  "{selectedPatient.medicalProblem || selectedPatient.reason || 'No clinical remarks recorded.'}"
+                </p>
               </div>
             </div>
           ) : (
