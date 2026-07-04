@@ -23,11 +23,18 @@ export default function DoctorDirectory() {
         fetch(url)
             .then(res => res.json())
             .then(data => {
-                setDoctors(data);
+                // 🛡️ Safety Check: Only set doctors if data is a valid array
+                if (Array.isArray(data)) {
+                    setDoctors(data);
+                } else {
+                    console.error("Expected array but received:", data);
+                    setDoctors([]); // Fallback to empty array to prevent filtering crash
+                }
                 setLoading(false);
             })
             .catch(err => {
                 console.error("Error fetching clinical directory:", err);
+                setDoctors([]); // Fallback to empty array on network failure
                 setLoading(false);
             });
     }, [specialty]);
@@ -57,20 +64,23 @@ export default function DoctorDirectory() {
         }
     };
 
-    const filteredDoctors = doctors.filter(doc => {
-        const fullName = (doc.name || `${doc.firstName} ${doc.lastName}`).toLowerCase();
-        return fullName.includes(searchTerm.toLowerCase());
-    });
+    // 🛡️ Safety Check: Safely filter only if doctors state is a valid array
+    const filteredDoctors = Array.isArray(doctors)
+        ? doctors.filter(doc => {
+            const fullName = (doc.name || `${doc.firstName} ${doc.lastName}`).toLowerCase();
+            return fullName.includes(searchTerm.toLowerCase());
+        })
+        : [];
 
     return (
         <div className="min-h-screen bg-[#f8fafc] font-sans text-slate-800 antialiased">
 
-            {/* 🌌 Premium Hero Banner Segment */}
+            {/* Premium Hero Banner Segment */}
             <div className="relative bg-[#0b1329] bg-gradient-to-br from-[#0f172a] via-[#0b1329] to-[#1e1b4b] py-20 px-6 text-center shadow-xl shadow-slate-950/20">
                 <div className="max-w-4xl mx-auto flex flex-col items-center">
-          <span className="inline-flex items-center gap-1.5 bg-sky-500/10 text-sky-400 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wider border border-sky-500/20 shadow-sm">
-            Core Health Healthcare Gateway
-          </span>
+                    <span className="inline-flex items-center gap-1.5 bg-sky-500/10 text-sky-400 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wider border border-sky-500/20 shadow-sm">
+                        Core Health Healthcare Gateway
+                    </span>
 
                     <h1 className="text-4xl md:text-5xl font-black mt-5 mb-3 tracking-tight text-white leading-[1.15]">
                         Find & Book World-Class Specialists
@@ -80,7 +90,7 @@ export default function DoctorDirectory() {
                         Search verified physicians, compare specialties, and reserve clinical consultation slots through one enterprise-grade healthcare gateway.
                     </p>
 
-                    {/* 🔍 Streamlined Search Input Bar */}
+                    {/* Streamlined Search Input Bar */}
                     <div className="mt-10 w-full max-w-2xl bg-white p-2 rounded-full shadow-2xl shadow-black/40 flex items-center border border-slate-200/50">
                         <div className="flex items-center gap-3 pl-4 flex-1">
                             <svg className="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -101,7 +111,7 @@ export default function DoctorDirectory() {
                 </div>
             </div>
 
-            {/* 🏢 Main Layout Container */}
+            {/* Main Layout Container */}
             <div className="max-w-[1240px] mx-auto py-16 px-6">
 
                 {/* Section Header */}
@@ -114,7 +124,7 @@ export default function DoctorDirectory() {
                     </p>
                 </div>
 
-                {/* 💊 Specialty Filter Tabs */}
+                {/* Specialty Filter Tabs */}
                 <div className="flex justify-center gap-2 flex-wrap mb-12 bg-white border border-slate-200/60 p-1.5 rounded-full max-w-2xl mx-auto shadow-sm shadow-slate-100">
                     {specialties.map((spec) => (
                         <button
@@ -158,13 +168,13 @@ export default function DoctorDirectory() {
                                                     {doc.name || `Dr. ${doc.firstName} ${doc.lastName}`}
                                                 </h3>
                                                 <span className="inline-flex items-center gap-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100 shadow-sm shrink-0">
-                          🛡️ Verified License
-                        </span>
+                                                    🛡️ Verified License
+                                                </span>
                                             </div>
                                             <div className="pt-1">
-                        <span className="inline-block bg-blue-50/50 text-blue-700 text-[11px] font-bold px-2.5 py-1 rounded-md border border-blue-100/40">
-                          {doc.specialization}
-                        </span>
+                                                <span className="inline-block bg-blue-50/50 text-blue-700 text-[11px] font-bold px-2.5 py-1 rounded-md border border-blue-100/40">
+                                                    {doc.specialization}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -173,14 +183,14 @@ export default function DoctorDirectory() {
                                         <div className="flex items-center justify-between text-xs text-slate-500">
                                             <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">License Number</span>
                                             <span className="text-slate-800 font-mono font-bold bg-white px-2 py-0.5 rounded border border-slate-200/60">
-                        {doc.licenseNumber || doc.license_number || 'Pending'}
-                      </span>
+                                                {doc.licenseNumber || doc.license_number || 'Pending'}
+                                            </span>
                                         </div>
                                         <div className="flex items-center justify-between text-xs text-slate-500 overflow-hidden">
                                             <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px] shrink-0">Contact Email</span>
                                             <span className="text-slate-700 font-medium truncate pl-4 max-w-[180px]">
-                        {doc.email}
-                      </span>
+                                                {doc.email}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -196,7 +206,7 @@ export default function DoctorDirectory() {
                     </div>
                 )}
 
-                {/* 📊 Metrics Banner */}
+                {/* Metrics Banner */}
                 <div className="mt-16 bg-[#0f172a] bg-gradient-to-r from-[#0f172a] to-[#1e1b4b] rounded-3xl p-8 shadow-xl text-white grid grid-cols-2 md:grid-cols-4 gap-6 text-center border border-slate-800/40">
                     <div>
                         <h4 className="text-2xl md:text-3xl font-black tracking-tight text-white">+15</h4>

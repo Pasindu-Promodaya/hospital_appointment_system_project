@@ -1,71 +1,73 @@
 package com.hospital.appointment.system.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.DynamicUpdate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
 @Table(name = "appointments")
+@DynamicUpdate // Optimizes database updates by only modifying changed columns
 public class Appointment {
 
+    // Primary key with auto-increment strategy
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Foreign key reference to the patient
     @Column(name = "patient_id", nullable = false)
     private Long patientId;
 
+    // Foreign key reference to the assigned doctor
     @Column(name = "doctor_id", nullable = false)
     private Long doctorId;
 
+    // Stores the full name of the patient for quick lookup
     @Column(name = "patient_name", nullable = false)
     private String patientName;
 
+    // The scheduled date for the medical appointment
     @Column(name = "appointment_date", nullable = false)
     private LocalDate appointmentDate;
 
+    // Standard starting time string identifier for the slot
     @Column(name = "time_slot", nullable = false)
     private LocalTime timeSlot;
 
-    // 🚀 CRITICAL FIX: Database එකේ තියෙන appointment_time එක map කිරීම
+    // Exact calculated operational time for the checkup session
     @Column(name = "appointment_time", nullable = false)
     private LocalTime appointmentTime;
 
+    // Brief textual description of the patient's symptoms or issue
     @Column(name = "medical_problem", length = 255)
     private String medicalProblem;
 
+    // Unique sequential token number issued to the patient for the day
     @Column(name = "token_number", nullable = false)
     private Integer tokenNumber;
 
+    // Defines the exact processing order inside the live doctor queue
     @Column(name = "queue_order", nullable = false)
     private Integer queueOrder;
 
+    // Current workflow lifecycle status mapped via custom Enumeration string
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private AppointmentStatus status = AppointmentStatus.PENDING;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    // Fields marked with @Transient to ignore schema mapping if columns are absent in DB table
+    @Transient
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Transient
     private LocalDateTime updatedAt;
 
+    // Default no-argument constructor required by JPA specifications
     public Appointment() {}
 
-    // Pre-persist logic to handle audit timestamps automatically
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
-
-    // Getters and Setters
+    // System Getters and Setters definitions for data access encapsulation
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

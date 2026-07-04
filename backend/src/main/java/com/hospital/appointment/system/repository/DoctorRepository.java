@@ -8,9 +8,9 @@ import java.util.List;
 @Repository
 public interface DoctorRepository extends JpaRepository<Doctor, Long> {
 
-    // Find active doctors by specialization with case-insensitive search
-    List<Doctor> findBySpecializationContainingIgnoreCaseAndIsActiveTrue(String specialization);
+    // Find active doctors based on their specialization
+    List<Doctor> findBySpecializationContainingIgnoreCaseAndActiveStatusTrue(String specialization);
 
-    // Find all active doctors
-    List<Doctor> findByIsActiveTrue();
+    // Find all doctors who are currently active
+    List<Doctor> findByActiveStatusTrue();
 }

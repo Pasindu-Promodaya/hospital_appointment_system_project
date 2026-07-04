@@ -4,7 +4,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 // Layout & Shared Components
 import Layout from './components/Layout';
 
-// Authentication Gateways (Fullscreen)
 import Login from './pages/StaffLogin';
 import PatientLogin from './PatientLogin';
 import Register from './Register';

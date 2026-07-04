@@ -30,7 +30,7 @@ public class DoctorService {
     @Autowired
     private ScheduleRepository scheduleRepository;
 
-    // Register a new medical practitioner and link their user credentials account
+    // Register a new doctor and create their user account
     @Transactional
     public Doctor registerNewDoctor(DoctorRegisterDTO dto) {
         if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
@@ -57,25 +57,26 @@ public class DoctorService {
         return doctorRepository.save(doctor);
     }
 
-    // Fetch all registered doctors from system storage
+    // Get all registered doctors from the database
     public List<Doctor> getAllDoctors() {
         return doctorRepository.findAll();
     }
 
-    // Save or update a doctor profile directly
+    // Save or update a doctor profile
     public Doctor saveDoctor(Doctor doctor) {
         return doctorRepository.save(doctor);
     }
 
-    // Fetch active doctors filtered by department specialty
+    // Get active doctors filtered by their specialty
     public List<Doctor> getDoctorsBySpecialty(String specialty) {
+        // 🎯 FIXED: Updated query methods to match the activeStatus field name
         if (specialty == null || specialty.isEmpty() || specialty.equalsIgnoreCase("All")) {
-            return doctorRepository.findByIsActiveTrue();
+            return doctorRepository.findByActiveStatusTrue();
         }
-        return doctorRepository.findBySpecializationContainingIgnoreCaseAndIsActiveTrue(specialty);
+        return doctorRepository.findBySpecializationContainingIgnoreCaseAndActiveStatusTrue(specialty);
     }
 
-    // Save a new weekly shift roster entry
+    // Save a new doctor schedule
     public DoctorSchedule saveSchedule(DoctorSchedule schedule) {
         if (schedule == null || schedule.getDoctor() == null || schedule.getDoctor().getId() == null) {
             throw new RuntimeException("Cannot record schedule: Target Doctor identification data is missing.");
@@ -89,7 +90,7 @@ public class DoctorService {
         return scheduleRepository.save(schedule);
     }
 
-    // Generates available appointment time slots by splitting shift block intervals
+    // Generate available time slots based on doctor shift duration
     public List<LocalTime> generateAvailableSlots(Long scheduleId) {
         DoctorSchedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new RuntimeException("Requested schedule profile not found"));
@@ -107,7 +108,7 @@ public class DoctorService {
         return slots;
     }
 
-    // Get mock data for today's live queue diagnostics matching UI specifications
+    // Get sample data for today's live queue diagnostics
     public List<Map<String, Object>> getTodayQueue(Long doctorId) {
         if (!doctorRepository.existsById(doctorId)) {
             throw new RuntimeException("Practitioner tracking sequence ID " + doctorId + " does not exist.");

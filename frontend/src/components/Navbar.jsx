@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const Navbar = () => {
+const NavBar = () => {
     const { user, logout } = useAuth();
 
     // Safely extract role parameters from global state or browser session caching objects
@@ -38,17 +38,17 @@ const Navbar = () => {
             return item.role === 'PUBLIC';
         }
 
-        // Scenario A: Authorized Doctor Deck -> Only display Doctor specific items
+        // Scenario A: Authorized Doctor Deck -> Display Doctor specific + Public Directory
         if (sanitizedRole === 'ROLE_DOCTOR' || sanitizedRole === 'DOCTOR') {
-            return item.role === 'ROLE_DOCTOR';
+            return item.role === 'ROLE_DOCTOR' || item.role === 'PUBLIC';
         }
 
-        // Scenario B: Hospital Administrator Panel -> Only display Admin specific items
+        // Scenario B: Hospital Administrator Panel -> Display Admin specific + Public Directory
         if (sanitizedRole === 'ROLE_ADMIN' || sanitizedRole === 'ADMIN') {
-            return item.role === 'ROLE_ADMIN';
+            return item.role === 'ROLE_ADMIN' || item.role === 'PUBLIC';
         }
 
-        // Scenario C: Authenticated Patient Context -> Display Patient items + Public directory if wanted
+        // Scenario C: Authenticated Patient Context -> Display Patient items + Public directory
         if (sanitizedRole === 'ROLE_PATIENT' || sanitizedRole === 'PATIENT') {
             return item.role === 'ROLE_PATIENT' || item.role === 'ROLE_PATIENT_ALERTS' || item.role === 'PUBLIC';
         }
@@ -137,4 +137,4 @@ const Navbar = () => {
     );
 };
 
-export default Navbar;
+export default NavBar;

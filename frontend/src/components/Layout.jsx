@@ -1,25 +1,17 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
-import NavBar from './Navbar';
-import Sidebar from './Sidebar';
+import React from "react";
+import { Outlet } from "react-router-dom";
+import NavBar from "./NavBar";
 
-const Layout = () => {
+export default function Layout() {
     return (
-        <div className="app-container flex flex-col min-h-screen">
-            {/* 1. Global Shared Top Navigation Bar */}
+        <div className="flex flex-col min-h-screen w-screen bg-slate-50">
+            {/* Global Top Navigation Bar */}
             <NavBar />
 
-            <div className="main-body flex flex-1">
-                {/* 2. Global Shared Sidebar */}
-                <Sidebar />
-
-                {/* 3. Dynamic Center Stage where Member pages load */}
-                <main className="content-stage flex-1 p-5 bg-[#f8f9fa]">
-                    <Outlet />
-                </main>
-            </div>
+            {/* Dynamic Main Page Content Area */}
+            <main className="flex-1 p-6">
+                <Outlet />
+            </main>
         </div>
     );
-};
-
-export default Layout;
+}

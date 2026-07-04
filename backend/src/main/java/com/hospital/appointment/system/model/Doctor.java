@@ -3,6 +3,7 @@ package com.hospital.appointment.system.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
 @Entity
@@ -11,13 +12,15 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+// Ignore Hibernate lazy loading proxy properties during JSON serialization
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Doctor {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ⛓️ Link with LAZY fetching and JSON reference protection
+    // Link doctor with user account using lazy fetching
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JsonManagedReference
     @JoinColumn(name = "user_id", nullable = false, unique = true)
@@ -50,7 +53,7 @@ public class Doctor {
     @Column(nullable = false)
     private String availability = "Available";
 
-    // Renamed variable to bypass filter glitch + Boxed Boolean to accept nulls cleanly
+    // Track active status of the doctor profile
     @Column(name = "is_active", nullable = false)
     private Boolean activeStatus = true;
 
@@ -65,7 +68,7 @@ public class Doctor {
         this.createdAt = LocalDateTime.now();
     }
 
-    // Custom constructor for manual instantiation if needed in services/tests
+    // Constructor for creating a doctor profile manually
     public Doctor(User user, String firstName, String lastName, String email, String telephoneNumber,
                   String specialization, String specialty, String licenseNumber, Boolean activeStatus, Long createdByAdminId) {
         this.user = user;
@@ -81,7 +84,7 @@ public class Doctor {
         this.createdByAdminId = createdByAdminId;
     }
 
-    // Explicit helper method for isActive configuration to support main branch compatibility
+    // Helper getters and setters for compatibility
     public Boolean getIsActive() {
         return this.activeStatus;
     }
