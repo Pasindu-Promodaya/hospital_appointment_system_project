@@ -15,7 +15,7 @@ import DoctorDirectory from './pages/DoctorDirectory';
 import DoctorDashboard from './pages/DoctorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import PatientDashboard from './PatientDashboard';
-import Notifications from './pages/Notifications';
+//import Notifications from './pages/Notifications';
 
 // Appointment Module Components
 import Booking from './pages/BookingPage';
@@ -45,7 +45,7 @@ export default function App() {
 
                     {/* 👤 Patient Profile Module Paths */}
                     <Route path="patient-dashboard" element={<PatientDashboard />} />
-                    <Route path="notifications" element={<Notifications />} />
+                    {/* <Route path="notifications" element={<Notifications />} /> */}
 
                     {/* 📅 Appointment Engine Module Paths */}
                     <Route path="booking" element={<Booking />} />

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { useAuth } from './context/AuthContext'; // 🎯 FIX: Import global Auth context hook
+import { useAuth } from './context/AuthContext'; // 🎯 Import global Auth context hook
 
 const Register = () => {
-  const { login } = useAuth(); // 🎯 FIX: Destructure your context state manager dispatcher
+  const { login } = useAuth(); // 🎯 Destructure your context state manager dispatcher
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -31,6 +31,26 @@ const Register = () => {
       return;
     }
 
+    // 🎯 BULLETPROOF FIX: Sanitize phone number to perfect international standard (+947xxxxxxxx)
+    let formattedPhone = formData.telephoneNumber.trim().replace(/\s+|-|\(|\)/g, ''); // Strips spaces, dashes, brackets
+
+    if (formattedPhone.startsWith('0')) {
+      // Handles: 0768365307 -> +94768365307
+      formattedPhone = '+94' + formattedPhone.substring(1);
+    } else if (formattedPhone.startsWith('+940')) {
+      // Handles: +940768365307 -> +94768365307
+      formattedPhone = '+94' + formattedPhone.substring(4);
+    } else if (formattedPhone.startsWith('940')) {
+      // Handles: 940768365307 -> +94768365307
+      formattedPhone = '+94' + formattedPhone.substring(3);
+    } else if (formattedPhone.startsWith('94') && !formattedPhone.startsWith('+94')) {
+      // Handles: 94768365307 -> +94768365307
+      formattedPhone = '+' + formattedPhone;
+    } else if (!formattedPhone.startsWith('+')) {
+      // Handles: 768365307 -> +94768365307
+      formattedPhone = '+94' + formattedPhone;
+    }
+
     setLoading(true);
 
     try {
@@ -40,10 +60,10 @@ const Register = () => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         dateOfBirth: formData.dateOfBirth,
-        phone: formData.telephoneNumber 
+        phone: formattedPhone // Dispatches the verified number format cleanly to your backend
       };
       
-      // 🎯 FIX: Updated to point directly to your live Spring Boot backend server ports
+      // Point directly to your live Spring Boot backend server ports
       await axios.post('http://localhost:8080/api/auth/register', payload);
       
       // Attempt automated authentication process right after a clean account creation
@@ -55,12 +75,12 @@ const Register = () => {
       const data = loginResponse.data;
 
       if (data && loginResponse.status === 200) {
-        // 🔑 🎯 FIX: Seed parameters securely into the global React app lifecycle memory engine
+        // 🔑 🎯 FIX: Bulletproof ID matching to prevent the "Unassigned" crash shown in image_c48d1c.png
         login({
           token: data.token,
           email: data.email,
           role: data.role || 'ROLE_PATIENT',
-          id: data.id || null,
+          id: data.id || data.userId || data.patientId || null, 
           doctorId: data.doctorId || null
         });
 
@@ -131,7 +151,7 @@ const Register = () => {
               <div className="absolute inset-y-0 left-0 top-6 pl-3 flex items-center pointer-events-none">
                 <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
               </div>
-              <input type="tel" name="telephoneNumber" required value={formData.telephoneNumber} onChange={handleChange} className="w-full text-sm pl-10 px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/30 font-medium" placeholder="(555) 000-0000" />
+              <input type="tel" name="telephoneNumber" required value={formData.telephoneNumber} onChange={handleChange} className="w-full text-sm pl-10 px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/30 font-medium" placeholder="076 836 5307" />
             </div>
           </div>
 

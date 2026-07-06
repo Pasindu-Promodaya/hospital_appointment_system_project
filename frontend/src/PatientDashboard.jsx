@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios"; 
+import { useAuth } from "./context/AuthContext"; // 🎯 FIXED: Import global context hook engine
+
 const PatientDashboard = () => {
+  const { user, login } = useAuth(); // 🎯 FIXED: Read the active user metadata globally
   const [userId, setUserId] = useState(null);
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,40 +24,46 @@ const PatientDashboard = () => {
     emergencyContactDetails: "",
   });
 
-  // 🔐 Step 1: Check for a valid user authentication session on mount
+  // 🔐 Step 1: Detect authenticated session context from the hook or fallback
   useEffect(() => {
-    const session = localStorage.getItem("userSession");
-    if (session) {
-      try {
-        const sessionData = JSON.parse(session);
-        const activeId = sessionData.id || sessionData.userId;
+    // Priority 1: Check active memory hook state context parameters
+    let activeId = user?.id || user?.userId;
+    let sessionData = user;
 
-        if (activeId) {
-          setUserId(activeId);
-          setPatient(sessionData);
-          setFormData({
-            firstName: sessionData.firstName || "",
-            lastName: sessionData.lastName || "",
-            sex: sessionData.sex || "",
-            email: sessionData.email || "",
-            telephoneNumber: sessionData.phone || sessionData.telephoneNumber || "",
-            dateOfBirth: sessionData.dateOfBirth || "",
-            bloodType: sessionData.bloodType || "",
-            knownDrugAllergies: sessionData.knownDrugAllergies || "",
-            chronicConditions: sessionData.chronicConditions || "",
-            emergencyContactDetails: sessionData.emergencyContactDetails || "",
-          });
-        } else {
-          setLoading(false);
+    // Priority 2: Safe local sync recovery boundary check if hook state hasn't propagated yet
+    if (!activeId) {
+      const storedSession = localStorage.getItem("userSession");
+      if (storedSession) {
+        try {
+          const parsed = JSON.parse(storedSession);
+          activeId = parsed.id || parsed.userId;
+          sessionData = parsed;
+        } catch (e) {
+          console.error("Session backup storage recovery exception:", e);
         }
-      } catch (e) {
-        console.error("Session parsing failed:", e);
-        setLoading(false);
       }
+    }
+
+    if (activeId) {
+      setUserId(activeId);
+      setPatient(sessionData);
+      setFormData({
+        firstName: sessionData.firstName || "",
+        lastName: sessionData.lastName || "",
+        sex: sessionData.sex || "",
+        email: sessionData.email || "",
+        telephoneNumber: sessionData.phone || sessionData.telephoneNumber || "",
+        dateOfBirth: sessionData.dateOfBirth || "",
+        bloodType: sessionData.bloodType || "",
+        knownDrugAllergies: sessionData.knownDrugAllergies || "",
+        chronicConditions: sessionData.chronicConditions || "",
+        emergencyContactDetails: sessionData.emergencyContactDetails || "",
+      });
     } else {
+      // If no valid keys are found, conclude loading sequence safely to show fallback boundaries
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   // 🔄 Step 2: Fetch patient records dynamically from the backend absolute port layout
   useEffect(() => {
@@ -78,6 +87,10 @@ const PatientDashboard = () => {
             chronicConditions: data.chronicConditions || "",
             emergencyContactDetails: data.emergencyContactDetails || "",
           });
+
+          // Seed memory systems concurrently so context parameters persist across browser tab refreshes
+          const updatedSessionState = { id: userId, userId, ...data };
+          localStorage.setItem("userSession", JSON.stringify(updatedSessionState));
         }
       } catch (err) {
         console.warn("Real-time profiling lookup tracking note:", err.message);
@@ -105,8 +118,15 @@ const PatientDashboard = () => {
     try {
       const { data } = await axios.put(`http://localhost:8080/api/patients/${userId}`, payload);
       setPatient(data);
+      
       const unifiedSession = { id: userId, userId, ...data };
       localStorage.setItem("userSession", JSON.stringify(unifiedSession));
+      
+      // Update global context state manager if login context dispatcher method is available
+      if (login) {
+        login(unifiedSession);
+      }
+      
       setIsEditing(false);
     } catch (err) {
       alert(err.response?.data?.message || "Failed to update profile");
@@ -186,7 +206,7 @@ const PatientDashboard = () => {
               <div className="pt-6 space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-slate-50 rounded-lg text-slate-400">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002-2v10a2 2 0 002 2z"/></svg>
                   </div>
                   <div className="overflow-hidden">
                     <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Primary Email</span>
@@ -215,13 +235,12 @@ const PatientDashboard = () => {
                 </div>
               </div>
 
-              {/* 🎯 INTEGRATED: Action Button pointing to the Appointments Module Interface Grid */}
               <button
                 onClick={() => navigate("/manage-appointments")}
                 className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-3 px-4 rounded-xl transition duration-150 ease-in-out shadow-md shadow-blue-500/10 flex items-center justify-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 00 2 2Z" />
                 </svg>
                 Manage My Appointments
               </button>
@@ -293,7 +312,7 @@ const PatientDashboard = () => {
             <form onSubmit={handleSave} className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">First Name</label>
+                  <label className="block text Red-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">First Name</label>
                   <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className="w-full text-sm p-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/40 font-medium" />
                 </div>
                 <div>

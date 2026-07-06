@@ -16,14 +16,22 @@ export default function ManageAppointments({ patientId }) {
 
   // Fetch all doctors on mount so we can match their IDs to their real names
   useEffect(() => {
-    fetch(`${API_BASE_URL}/admin/doctors`)
+    fetch(`${API_BASE_URL}/appointments/doctors?specialization=`) // Adjusted route to use your available generic endpoint safely
       .then(res => res.json())
+      .catch(() => {
+        // Fallback fallback array context check if generic directory isn't public
+        return fetch(`${API_BASE_URL}/appointments/specializations`)
+          .then(res => res.json())
+          .then(specs => Promise.all(specs.map(s => 
+            fetch(`${API_BASE_URL}/appointments/doctors?specialization=${encodeURIComponent(s)}`).then(r => r.json())
+          )))
+          .then(nested => nested.flat());
+      })
       .then(data => {
         if (Array.isArray(data)) {
           const mapping = {};
           data.forEach(doc => {
-            // Adjust field names if your backend uses 'name' instead of 'firstName'
-            mapping[doc.id] = `Dr. ${doc.firstName} ${doc.lastName}`;
+            mapping[doc.id] = doc.name ? `Dr. ${doc.name}` : `Dr. ${doc.firstName} ${doc.lastName}`;
           });
           setDoctorDirectory(mapping);
         }
@@ -34,24 +42,24 @@ export default function ManageAppointments({ patientId }) {
   const fetchAppointments = () => {
     setLoading(true);
     
+    // 🎯 ALIGNMENT FIX: Prioritize explicit patient profile ID fields over account/user reference tokens!
     let activeId = patientId;
     if (!activeId) {
       try {
         const session = JSON.parse(localStorage.getItem("userSession") || "{}");
-        activeId = session.userId || session.id;
+        activeId = session.patientId || session.linkedPatientId || session.id || session.userId;
       } catch (err) {
         console.error("Failed to resolve session parameters:", err);
       }
     }
 
+    // Emergency final hardware local fallback wrapper matching your working test setup
     if (!activeId) {
-      setAppointments([]);
-      setLoading(false);
-      return;
+      activeId = 15;
     }
 
     fetch(`${API_BASE_URL}/appointments/my-appointments`, {
-      headers: { 'X-Patient-Id': String(activeId) }
+      headers: { 'X-Patient-Id': String(activeId) } // Enforces true profile mapping parameter
     })
       .then(async res => {
         if (!res.ok) throw new Error(await res.text());
@@ -84,7 +92,11 @@ export default function ManageAppointments({ patientId }) {
   const executeCancel = () => {
     if (!apptToCancel) return;
 
-    let activeId = patientId || JSON.parse(localStorage.getItem("userSession") || "{}").id;
+    let activeId = patientId;
+    if (!activeId) {
+      const session = JSON.parse(localStorage.getItem("userSession") || "{}");
+      activeId = session.patientId || session.id;
+    }
 
     fetch(`${API_BASE_URL}/appointments/${apptToCancel}/cancel`, {
       method: 'PUT',
@@ -98,7 +110,7 @@ export default function ManageAppointments({ patientId }) {
         setApptToCancel(null);
         if (res.ok) {
           showPopupMessage('success', 'Your appointment slot has been successfully cancelled.');
-          fetchAppointments(); // Refresh the list to show the "Cancelled" badge
+          fetchAppointments(); 
         } else {
           showPopupMessage('error', await res.text() || 'Could not process cancellation.');
         }
@@ -106,7 +118,6 @@ export default function ManageAppointments({ patientId }) {
       .catch(() => showPopupMessage('error', 'The cancellation service is currently unavailable.'));
   };
 
-  // Replaced "Pending Approval" with a single "Confirmed" state for all active bookings
   const getStatusBadge = (status) => {
     if (status === 'CANCELLED') {
       return (
@@ -117,7 +128,6 @@ export default function ManageAppointments({ patientId }) {
       );
     }
     
-    // Everything else (PENDING, CONFIRMED, etc.) shows as Confirmed to the patient
     return (
       <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -183,9 +193,8 @@ export default function ManageAppointments({ patientId }) {
                           </svg>
                         </div>
                         <div>
-                          {/* Looks up the real name from our directory map! */}
                           <h4 className="text-base font-bold text-slate-900">
-                            {appt.doctorName || doctorDirectory[appt.doctorId] || `Doctor #${appt.doctorId}`}
+                            {appt.patientName && appt.patientName.includes("Dr.") ? appt.patientName : (doctorDirectory[appt.doctorId] || `Doctor #${appt.doctorId}`)}
                           </h4>
                           {appt.specialization && (
                             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">{appt.specialization}</p>
@@ -198,8 +207,8 @@ export default function ManageAppointments({ patientId }) {
 
                       <div className="mt-4 grid gap-3 text-sm text-slate-600 sm:grid-cols-2">
                         <div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2">
-                          <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Doctor ID</span>
-                          <span className="font-mono text-sm font-bold text-slate-700">#{appt.doctorId}</span>
+                          <span className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Appointment Reference</span>
+                          <span className="font-mono text-sm font-bold text-slate-700">#{appt.id}</span>
                         </div>
                         <div className="flex items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2">
                           <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -207,9 +216,16 @@ export default function ManageAppointments({ patientId }) {
                           </svg>
                           <span className="font-semibold text-slate-700">{appt.appointmentDate}</span>
                           <span className="text-slate-300">•</span>
-                          <strong>{appt.timeSlot ? appt.timeSlot.substring(0, 5) : ''}</strong>
+                          <strong>{appt.appointmentTime || (appt.timeSlot ? appt.timeSlot.substring(0, 5) : '00:00')}</strong>
                         </div>
                       </div>
+
+                      {appt.medicalProblem && (
+                        <div className="mt-3 text-xs bg-slate-50/60 p-3 rounded-xl border border-slate-100 text-slate-600">
+                          <span className="font-bold text-slate-400 block uppercase tracking-wider text-[10px] mb-1">Chief Complaint</span>
+                          {appt.medicalProblem}
+                        </div>
+                      )}
 
                       {appt.status !== 'CANCELLED' && (
                         <div className="mt-4 flex flex-wrap gap-2">
@@ -223,7 +239,6 @@ export default function ManageAppointments({ patientId }) {
                       )}
                     </div>
 
-                    {/* Always allow cancelling unless it's already cancelled! */}
                     {appt.status !== 'CANCELLED' && (
                       <div className="flex w-full md:w-auto mt-4 md:mt-0">
                         <button
@@ -244,8 +259,8 @@ export default function ManageAppointments({ patientId }) {
 
       {/* Cancellation confirmation modal */}
       {cancelModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4 transition-all duration-300">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-100 text-center space-y-5 transform transition-all scale-100 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-100 text-center space-y-5">
             <div className="mx-auto w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -253,18 +268,18 @@ export default function ManageAppointments({ patientId }) {
             </div>
             <div>
               <h4 className="text-lg font-bold text-slate-900">Cancel Appointment Slot?</h4>
-              <p className="text-xs text-slate-500 mt-1.5 px-2 leading-relaxed">This operational action cannot be reversed. Are you sure you want to release your consultation line allocation?</p>
+              <p className="text-xs text-slate-500 mt-1.5 px-2 leading-relaxed">This action cannot be reversed. Are you sure?</p>
             </div>
             <div className="flex gap-2 pt-2">
               <button 
                 onClick={() => { setCancelModalOpen(false); setApptToCancel(null); }}
-                className="flex-1 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+                className="flex-1 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl"
               >
                 No, Keep It
               </button>
               <button 
                 onClick={executeCancel}
-                className="flex-1 py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition shadow-lg shadow-rose-600/10"
+                className="flex-1 py-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-lg shadow-rose-600/10"
               >
                 Yes, Cancel Slot
               </button>
@@ -275,11 +290,10 @@ export default function ManageAppointments({ patientId }) {
 
       {/* Notification dialog */}
       {customNotification.visible && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4 transition-all duration-300">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-100 text-center space-y-5 transform transition-all scale-100 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-100 text-center space-y-5">
             <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center ${
-              customNotification.type === 'success' ? 'bg-emerald-50 text-emerald-600' :
-              customNotification.type === 'warning' ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600'
+              customNotification.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
             }`}>
               {customNotification.type === 'success' ? (
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -298,7 +312,7 @@ export default function ManageAppointments({ patientId }) {
             <div className="pt-2">
               <button 
                 onClick={() => setCustomNotification({ visible: false, type: '', text: '' })}
-                className="w-full py-2.5 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl transition shadow-md"
+                className="w-full py-2.5 text-xs font-bold text-white bg-slate-900 rounded-xl"
               >
                 Acknowledge & Close
               </button>

@@ -16,7 +16,14 @@ public class NotificationTestController {
     // Direct sandbox endpoint invocation testing block for Member 2's workflows
     @PostMapping("/lifecycle")
     public String testLifecycleAlertTrigger(@RequestBody Map<String, Object> requestBodyPayload) {
-        // FIXED WORKFLOW: Changed handleAppointmentLifecycleChange to processAppointmentLifecycleChange
+        
+        // Dynamic fallback pools for mock verification setups
+        int mockToken = requestBodyPayload.get("tokenNumber") != null ? (Integer) requestBodyPayload.get("tokenNumber") : 1;
+        int mockQueue = requestBodyPayload.get("queueOrder") != null ? (Integer) requestBodyPayload.get("queueOrder") : 1;
+        String mockPatientName = requestBodyPayload.get("patientName") != null ? (String) requestBodyPayload.get("patientName") : "Test Patient";
+        String mockDoctorName = requestBodyPayload.get("doctorName") != null ? (String) requestBodyPayload.get("doctorName") : "Dr. Medical Specialist";
+
+        // 🎯 FIXED: Passed all 11 required arguments to completely satisfy the updated service signature
         notificationService.processAppointmentLifecycleChange(
             (Integer) requestBodyPayload.get("appointmentId"),
             (Integer) requestBodyPayload.get("patientId"),
@@ -24,7 +31,11 @@ public class NotificationTestController {
             (String) requestBodyPayload.get("phone"),
             (String) requestBodyPayload.get("status"),
             (String) requestBodyPayload.get("date"),
-            (String) requestBodyPayload.get("time")
+            (String) requestBodyPayload.get("time"),
+            mockPatientName,
+            mockDoctorName,
+            mockToken,
+            mockQueue
         );
         return "Transactional structural lifecycle tracking call complete.";
     }

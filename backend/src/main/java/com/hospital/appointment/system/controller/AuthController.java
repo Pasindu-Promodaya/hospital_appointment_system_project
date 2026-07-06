@@ -162,7 +162,27 @@ public class AuthController {
 
         String realJwtToken = jwtTokenProvider.generateToken(user.getEmail(), roleStr);
 
-        AuthResponse response = new AuthResponse(realJwtToken, user.getEmail(), roleStr, user.getId(), null);
+        // 🎯 CRITICAL REPAIR POOL: 
+        // Query the mapped patient record profile by user_id from database repository 
+        // to dynamically pass the true patient ID (e.g., 15) instead of passing null!
+        Long resolvedPatientProfileId = null;
+        Optional<Patient> patientOptional = patientRepository.findAll().stream()
+                .filter(p -> p.getUserId() != null && p.getUserId().equals(user.getId()))
+                .findFirst();
+
+        if (patientOptional.isPresent()) {
+            resolvedPatientProfileId = patientOptional.get().getId();
+        }
+
+        // Pass the resolved Patient Profile primary key into the 5th variable slot!
+        AuthResponse response = new AuthResponse(
+                realJwtToken, 
+                user.getEmail(), 
+                roleStr, 
+                user.getId(), 
+                resolvedPatientProfileId
+        );
+        
         return ResponseEntity.ok(response);
     }
 }
