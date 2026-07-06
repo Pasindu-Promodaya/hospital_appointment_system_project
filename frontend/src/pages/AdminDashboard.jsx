@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 export default function AdminDashboard() {
     // Admin session and authentication states
@@ -14,23 +14,26 @@ export default function AdminDashboard() {
 
     // Dynamic state trackers for live queue and metrics
     const [queueRecords, setQueueRecords] = useState([]);
+    const [activeId, setActiveId] = useState(null); 
     const [activeToken, setActiveToken] = useState('None');
     const [activePatientName, setActivePatientName] = useState('None');
     const [waitingCount, setWaitingCount] = useState(0);
     const [servedTodayCount, setServedTodayCount] = useState(0);
-    const [avgConsultTime, setAvgConsultTime] = useState('0 mins');
+    const [avgConsultTime, setAvgConsultTime] = useState('12 mins');
     const [systemLogs, setSystemLogs] = useState([]);
+    const [doctorShiftEnd, setDoctorShiftEnd] = useState(null);
 
     // Set tracker to remove locally completed active patients from table instantly
     const [completedIds, setCompletedIds] = useState(new Set());
 
     // Input fields for onboarding new doctor profiles
-    const [docEmail, setDocEmail] = useState('');
-    const [docPassword, setDocPassword] = useState('');
     const [docFirstName, setDocFirstName] = useState('');
     const [docLastName, setDocLastName] = useState('');
+    const [docEmail, setDocEmail] = useState('');
+    const [docPassword, setDocPassword] = useState('');
+    const [docConfirmPassword, setDocConfirmPassword] = useState(''); 
     const [docPhone, setDocPhone] = useState('');
-    const [docSpecialization, setDocSpecialization] = useState('');
+    const [docSpecialization, setDocSpecialization] = useState(''); // Only one state needed now
     const [docLicense, setDocLicense] = useState('');
     const [regSuccess, setRegSuccess] = useState('');
     const [regError, setRegError] = useState('');
@@ -43,7 +46,6 @@ export default function AdminDashboard() {
                 const data = await response.json();
                 if (Array.isArray(data)) {
                     setDoctorsList(data);
-                    // Automatically select the first doctor if no selection exists
                     if (data.length > 0 && !selectedDoctorId) {
                         setSelectedDoctorId(data[0].id.toString());
                     }
@@ -51,14 +53,6 @@ export default function AdminDashboard() {
             }
         } catch (err) {
             console.error("Error pulling doctor array:", err.message);
-            // Fallback mock array if server connection fails during development
-            const fallback = [
-                { id: 1, firstName: "Kasun", lastName: "Rathnayaka", specialization: "General Practitioner (OPD)" },
-                { id: 2, firstName: "Chamari", lastName: "Athapaththu", specialization: "Cardiologist" },
-                { id: 15, firstName: "Amal", lastName: "Bandara", specialization: "Pediatrician" }
-            ];
-            setDoctorsList(fallback);
-            if (!selectedDoctorId) setSelectedDoctorId('1');
         }
     };
 
@@ -66,44 +60,61 @@ export default function AdminDashboard() {
     const fetchDoctorQueueData = async (docId) => {
         if (!docId) return;
         try {
-            // Fetch live patients list currently in queue
             const response = await fetch(`http://localhost:8080/api/appointments/doctor-queue/${docId}`);
-
-            // Fetch exact completed patient count directly from DB to prevent sync lag
             const servedResponse = await fetch(`http://localhost:8080/api/appointments/doctor-served-count/${docId}`);
+
+            const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+            const scheduleResponse = await fetch(`http://localhost:8080/api/doctors/${docId}/schedule?day=${dayOfWeek}`);
+            if (scheduleResponse.ok) {
+                const schedData = await scheduleResponse.json();
+                if (schedData && schedData.endTime) {
+                    setDoctorShiftEnd(schedData.endTime);
+                }
+            }
 
             if (response.ok) {
                 const data = await response.json();
 
                 if (Array.isArray(data)) {
-                    setQueueRecords(data);
+                    const nowStr = new Date().toTimeString().substring(0, 5);
+                    const isShiftEnded = doctorShiftEnd && nowStr > doctorShiftEnd.substring(0, 5);
 
-                    // Locate active consulting patient ignoring locally cleared profile IDs
-                    const consultingPatients = data.filter(r => !completedIds.has(r.id) && (r.status === 'SERVING' || r.status === 'IN_CONSULTATION'));
+                    const processedData = data.map(record => {
+                        const statusUpper = String(record.status).toUpperCase();
+                        if (isShiftEnded && ['CONFIRMED', 'WAITING', 'PENDING'].includes(statusUpper)) {
+                            return { ...record, status: 'CANCELLED' };
+                        }
+                        return record;
+                    });
+
+                    setQueueRecords(processedData);
+
+                    // Check for 'CALLED' status to sync up with database states
+                    const consultingPatients = processedData.filter(r => !completedIds.has(r.id) && r.status === 'CALLED');
 
                     if (consultingPatients.length > 0) {
-                        // Select the latest active patient inside the array
                         const latestActive = consultingPatients[consultingPatients.length - 1];
+                        setActiveId(latestActive.id);
                         setActiveToken(latestActive.tokenNumber);
                         setActivePatientName(latestActive.patientName);
                     } else {
+                        setActiveId(null);
                         setActiveToken('None');
                         setActivePatientName('None');
                     }
 
-                    // Extract total count of waiting patients
-                    const waiting = data.filter(r => r.status === 'WAITING' || r.status === 'PENDING').length;
+                    const waiting = processedData.filter(r => 
+                        ['CONFIRMED', 'WAITING', 'PENDING'].includes(String(r.status).toUpperCase())
+                    ).length;
                     setWaitingCount(waiting);
 
-                    setAvgConsultTime('12 mins');
                     setSystemLogs([
                         `[SYSTEM]: Core sync active for Doctor Node #${docId}`,
-                        `[GATEWAY]: Fetched ${data.length} active row elements dynamically.`
+                        `[GATEWAY]: Fetched ${processedData.length} active row elements dynamically.`
                     ]);
                 }
             }
 
-            // Bind native database count safely to the served count tracker state
             if (servedResponse.ok) {
                 const count = await servedResponse.json();
                 setServedTodayCount(Number(count));
@@ -139,7 +150,7 @@ export default function AdminDashboard() {
             const liveInterval = setInterval(() => fetchDoctorQueueData(selectedDoctorId), 3000);
             return () => clearInterval(liveInterval);
         }
-    }, [selectedDoctorId, completedIds]);
+    }, [selectedDoctorId, completedIds, doctorShiftEnd]);
 
     // Submit system administrator authentication credentials
     const handleAdminLogin = async (e) => {
@@ -171,20 +182,37 @@ export default function AdminDashboard() {
         e.preventDefault();
         setRegError('');
         setRegSuccess('');
+
+        // Password confirmation validation
+        if (docPassword !== docConfirmPassword) {
+            setRegError('Passwords do not match. Please verify and try again.');
+            return;
+        }
+
         const payload = {
-            email: docEmail, password: docPassword, firstName: docFirstName,
-            lastName: docLastName, telephoneNumber: docPhone, specialization: docSpecialization,
-            licenseNumber: docLicense, createdByAdminId: currentAdmin ? currentAdmin.id : null
+            email: docEmail, 
+            password: docPassword, 
+            firstName: docFirstName,
+            lastName: docLastName, 
+            telephoneNumber: docPhone, 
+            specialization: docSpecialization,
+            specialty: docSpecialization, // Passing the dropdown value to both to satisfy the backend
+            licenseNumber: docLicense, 
+            createdByAdminId: currentAdmin ? currentAdmin.id : null
         };
+
         try {
-            const response = await fetch('http://localhost:8080/api/doctors', {
+            const response = await fetch('http://localhost:8080/api/admin/register-doctor', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(currentAdmin?.token ? { 'Authorization': `Bearer ${currentAdmin.token}` } : {})
+                },
                 body: JSON.stringify(payload)
             });
             if (!response.ok) throw new Error('Failed to register doctor.');
             setRegSuccess("Practitioner Profile Committed Successfully!");
-            setDocEmail(''); setDocPassword(''); setDocFirstName(''); setDocLastName('');
+            setDocEmail(''); setDocPassword(''); setDocConfirmPassword(''); setDocFirstName(''); setDocLastName('');
             setDocPhone(''); setDocSpecialization(''); setDocLicense('');
             fetchRegisteredDoctors();
         } catch (err) {
@@ -192,49 +220,105 @@ export default function AdminDashboard() {
         }
     };
 
-    // Trigger next patient token index and clear out previous active profiles
+    // 🎯 FIXED DYNAMIC LAYOUT SORTING MATRIX
+    const visibleRecords = useMemo(() => {
+        return [...queueRecords].sort((a, b) => {
+            const statusA = String(a.status).toUpperCase();
+            const statusB = String(b.status).toUpperCase();
+
+            const score = (status) => {
+                if (['COMPLETED', 'DONE'].includes(status)) return 1;               // 1. Completed goes to the VERY TOP
+                if (['CALLED', 'SERVING'].includes(status)) return 2;               // 2. Serving is next
+                if (['CONFIRMED', 'WAITING', 'PENDING'].includes(status)) return 3; // 3. All Waiting patients in one group
+                if (status === 'CANCELLED') return 4;                               // 4. Cancelled at the very bottom
+                return 5; 
+            };
+
+            const scoreA = score(statusA);
+            const scoreB = score(statusB);
+
+            // Group Sort (Completed -> Serving -> Waiting)
+            if (scoreA !== scoreB) {
+                return scoreA - scoreB; 
+            }
+
+            // 🎯 CRITICAL FIX: Sort purely by the backend's queueOrder!
+            return (a.queueOrder || 0) - (b.queueOrder || 0);
+        });
+    }, [queueRecords]);
+
+    // Pulling from visibleRecords ensures we start order of numbers chronologically
     const handleCallNextPatient = async () => {
-        const nextPatient = queueRecords.find(r => r.status === 'WAITING' || r.status === 'PENDING');
-        if (!nextPatient) return;
+        const nextPatient = visibleRecords.find(r => 
+            ['CONFIRMED', 'WAITING', 'PENDING'].includes(String(r.status).toUpperCase()) && !(r.queueOrder > r.tokenNumber)
+        ) || visibleRecords.find(r => ['CONFIRMED', 'WAITING', 'PENDING'].includes(String(r.status).toUpperCase()));
+
+        if (!nextPatient) {
+            alert("No patients are currently waiting in the queue.");
+            return;
+        }
 
         try {
-            // Push active entries into temporary state array to skip render delay
-            const currentServingPatients = queueRecords.filter(r => r.status === 'SERVING' || r.status === 'IN_CONSULTATION');
-
-            setCompletedIds(prev => {
-                const nextSet = new Set(prev);
-                currentServingPatients.forEach(p => nextSet.add(p.id));
-                return nextSet;
-            });
-
-            // Increment served today metric locally for instant layout feedback
-            setServedTodayCount(prev => prev + 1);
-
             const response = await fetch(`http://localhost:8080/api/appointments/${nextPatient.id}/next`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(currentAdmin?.token ? { 'Authorization': `Bearer ${currentAdmin.token}` } : {})
+                }
             });
-            if (!response.ok) throw new Error('Failed to forward token stack pointer.');
-
-            // Call brief delay buffer to ensure DB commit completes before triggering fetch reload
-            setTimeout(async () => {
-                await fetchDoctorQueueData(selectedDoctorId);
-            }, 400);
-
+            if (response.ok) {
+                if (activeId) {
+                    setCompletedIds(prev => new Set(prev).add(activeId));
+                }
+                fetchDoctorQueueData(selectedDoctorId);
+            }
         } catch (err) {
             alert(err.message);
         }
     };
 
-    // Terminate authorized administrator portal access session
-    const handleLogout = () => {
-        localStorage.removeItem('user');
-        setIsAdminLoggedIn(false);
-        setCurrentAdmin(null);
+    // CONTROL PANEL OVERRIDE: Global No-Show Event Action Trigger
+    const handleGlobalNoShow = async () => {
+        if (!activeId) return; 
+        try {
+            const response = await fetch(`http://localhost:8080/api/appointments/${activeId}/no-show`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(currentAdmin?.token ? { 'Authorization': `Bearer ${currentAdmin.token}` } : {})
+                }
+            });
+            if (response.ok) {
+                setActiveId(null);
+                fetchDoctorQueueData(selectedDoctorId);
+            }
+        } catch (err) {
+            console.error("Failed handling global no show state update:", err.message);
+        }
     };
 
-    // Filter out processed rows locally before rendering rows to screen layout
-    const visibleRecords = queueRecords.filter(r => !completedIds.has(r.id));
+    const handleCompleteSession = async () => {
+        if (!activeId) return;
+        try {
+            const response = await fetch(`http://localhost:8080/api/appointments/${activeId}/complete`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(currentAdmin?.token ? { 'Authorization': `Bearer ${currentAdmin.token}` } : {})
+                }
+            });
+            if (response.ok) {
+                setCompletedIds(prev => new Set(prev).add(activeId));
+                setActiveId(null);
+                fetchDoctorQueueData(selectedDoctorId);
+            }
+        } catch (err) {
+            console.error(err.message);
+        }
+    };
+
+    const isQueueEmpty = !queueRecords.some(r => ['CONFIRMED', 'WAITING', 'PENDING'].includes(String(r.status).toUpperCase()));
+    const hasActivePatient = queueRecords.some(r => String(r.status).toUpperCase() === 'CALLED');
 
     return (
         <div className="bg-[#f8fafc] min-h-screen font-sans text-slate-800 antialiased">
@@ -246,10 +330,9 @@ export default function AdminDashboard() {
                         Admin Command Center
                     </span>
                 </div>
-
             </div>
 
-            {/*Title Banner */}
+            {/* Title Banner */}
             <div className="relative bg-[#0b1329] bg-gradient-to-br from-[#0f172a] via-[#0b1329] to-[#1e1b4b] py-16 px-8 shadow-xl shadow-slate-950/10 border-b border-slate-800/40">
                 <div className="max-w-[1340px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div>
@@ -259,9 +342,7 @@ export default function AdminDashboard() {
                         <h1 className="text-3xl md:text-4xl font-black mt-4 mb-2 tracking-tight text-white leading-tight">
                             Patient Queue & Admin Dashboard
                         </h1>
-                        <p className="text-slate-400 text-xs md:text-sm font-medium">
-                            Welcome back, Mahima
-                        </p>
+                        <p className="text-slate-400 text-xs md:text-sm font-medium">Welcome back, Administrator</p>
                     </div>
 
                     {/* Active Practitioner Selector */}
@@ -288,7 +369,7 @@ export default function AdminDashboard() {
                     {/* Left Column Stack */}
                     <div className="lg:col-span-2 flex flex-col gap-8">
 
-                        {/* Live Queue Container with Scrollbar Viewports */}
+                        {/* Live Queue Container */}
                         <div className="bg-white rounded-[24px] border border-slate-200/70 p-6 shadow-sm">
                             <div className="border-b border-slate-100 pb-4 mb-5">
                                 <h3 className="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
@@ -300,40 +381,44 @@ export default function AdminDashboard() {
                             <div className="max-h-[420px] overflow-y-auto custom-scrollbar pr-1">
                                 <table className="w-full border-collapse text-left">
                                     <thead className="sticky top-0 bg-white z-10 shadow-sm shadow-white">
-                                    <tr className="text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100 bg-white">
-                                        <th className="pb-3 px-3">Token sequence</th>
-                                        <th className="pb-3 px-3">Patient credentials</th>
-                                        <th className="pb-3 px-3 text-right">Live workflow status</th>
-                                    </tr>
+                                        <tr className="text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100 bg-white">
+                                            <th className="pb-3 px-3">Token sequence</th>
+                                            <th className="pb-3 px-3">Patient credentials</th>
+                                            <th className="pb-3 px-3 text-right">Live workflow status</th>
+                                        </tr>
                                     </thead>
                                     <tbody className="text-xs font-bold">
-                                    {visibleRecords.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="3" className="py-12 px-3 text-center text-slate-400 font-medium bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                                                <span className="text-2xl block mb-2">🍃</span>
-                                                No active patient tokens issued for this practitioner today.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        visibleRecords.map((record, index) => {
-                                            const isConsulting = record.status === 'SERVING' || record.status === 'IN_CONSULTATION';
-                                            return (
-                                                <tr key={record.id || index} className="border-b border-slate-100 last:border-none hover:bg-slate-50/70 transition-colors">
-                                                    <td className="py-4 px-3 text-blue-600 font-mono text-sm">#{record.tokenNumber}</td>
-                                                    <td className="py-4 px-3 text-slate-700 text-sm font-extrabold">{record.patientName}</td>
-                                                    <td className="py-4 px-3 text-right">
-                                                        <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black tracking-wide uppercase border ${
-                                                            isConsulting
-                                                                ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                                                                : 'bg-orange-50 text-orange-500 border-orange-200'
-                                                        }`}>
-                                                            {isConsulting ? 'IN CONSULTATION' : 'WAITING'}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
+                                        {visibleRecords.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="3" className="py-12 px-3 text-center text-slate-400 font-medium bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                                    No active patient tokens issued for this practitioner today.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            visibleRecords.map((record, index) => {
+                                                const statusUpper = String(record.status).toUpperCase();
+                                                const isCompleted = ['COMPLETED', 'DONE'].includes(statusUpper);
+                                                const isCalled = statusUpper === 'CALLED';
+                                                const isCancelled = statusUpper === 'CANCELLED';
+
+                                                return (
+                                                    <tr key={record.id || index} className="border-b border-slate-100 last:border-none hover:bg-slate-50/70 transition-colors">
+                                                        <td className="py-4 px-3 text-blue-600 font-mono text-sm">#{record.tokenNumber}</td>
+                                                        <td className="py-4 px-3 text-slate-700 text-sm font-extrabold">{record.patientName}</td>
+                                                        <td className="py-4 px-3 text-right">
+                                                            <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black tracking-wide uppercase border ${
+                                                                isCompleted ? 'bg-green-50 text-green-600 border-green-200' :
+                                                                isCalled ? 'bg-sky-50 text-sky-600 border-sky-200' :
+                                                                isCancelled ? 'bg-slate-100 text-slate-400 border-slate-200 line-through' :
+                                                                'bg-amber-50 text-amber-600 border-amber-200'
+                                                            }`}>
+                                                                {isCompleted ? 'COMPLETED' : isCalled ? 'SERVING' : isCancelled ? 'CANCELLED' : 'WAITING'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -357,11 +442,17 @@ export default function AdminDashboard() {
                                     <input type="text" placeholder="Last Name" value={docLastName} onChange={(e) => setDocLastName(e.target.value)} required className="p-3.5 rounded-xl border border-slate-200 text-xs font-bold focus:border-blue-500 outline-none bg-slate-50/40 text-slate-800" />
                                 </div>
                                 <input type="email" placeholder="Email Address" value={docEmail} onChange={(e) => setDocEmail(e.target.value)} required className="p-3.5 rounded-xl border border-slate-200 text-xs font-bold focus:border-blue-500 outline-none bg-slate-50/40 text-slate-800" />
-                                <input type="password" placeholder="Access Password" value={docPassword} onChange={(e) => setDocPassword(e.target.value)} required className="p-3.5 rounded-xl border border-slate-200 text-xs font-bold focus:border-blue-500 outline-none bg-slate-50/40 text-slate-800" />
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <input type="password" placeholder="Access Password" value={docPassword} onChange={(e) => setDocPassword(e.target.value)} required className="p-3.5 rounded-xl border border-slate-200 text-xs font-bold focus:border-blue-500 outline-none bg-slate-50/40 text-slate-800" />
+                                    <input type="password" placeholder="Confirm Password" value={docConfirmPassword} onChange={(e) => setDocConfirmPassword(e.target.value)} required className="p-3.5 rounded-xl border border-slate-200 text-xs font-bold focus:border-blue-500 outline-none bg-slate-50/40 text-slate-800" />
+                                </div>
+
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <input type="text" placeholder="Telephone Sequence" value={docPhone} onChange={(e) => setDocPhone(e.target.value)} className="p-3.5 rounded-xl border border-slate-200 text-xs font-bold focus:border-blue-500 outline-none bg-slate-50/40 text-slate-800" />
                                     <input type="text" placeholder="Verified License No" value={docLicense} onChange={(e) => setDocLicense(e.target.value)} required className="p-3.5 rounded-xl border border-slate-200 text-xs font-bold focus:border-blue-500 outline-none bg-slate-50/40 text-slate-800" />
                                 </div>
+                                
                                 <select value={docSpecialization} onChange={(e) => setDocSpecialization(e.target.value)} required className="p-3.5 rounded-xl border border-slate-200 text-xs font-bold bg-slate-50/40 focus:border-blue-500 outline-none text-slate-600 cursor-pointer">
                                     <option value="">-- Select Specialty Track --</option>
                                     <option value="General Practitioner">General Practitioner (OPD)</option>
@@ -369,6 +460,7 @@ export default function AdminDashboard() {
                                     <option value="Pediatrician">Pediatrician</option>
                                     <option value="Neurologist">Neurologist</option>
                                 </select>
+
                                 <button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-500/10 cursor-pointer mt-2">
                                     Commit Practitioner Profile
                                 </button>
@@ -379,7 +471,7 @@ export default function AdminDashboard() {
                     {/* Right Side Control Widgets */}
                     <div className="flex flex-col gap-6">
 
-                        {/* Live Terminal Monitor Deck Component */}
+                        {/* Live Terminal Monitor Component */}
                         <div className="bg-[#0b1329] bg-gradient-to-br from-[#0f172a] to-[#1e1b4b] p-6 rounded-[24px] text-white shadow-xl shadow-slate-950/20 border border-slate-800/60 relative overflow-hidden group">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all duration-300"></div>
 
@@ -395,29 +487,55 @@ export default function AdminDashboard() {
                                 <h3 className="m-0 mt-1.5 mb-4 text-xl font-black tracking-tight text-white leading-tight">
                                     {activePatientName}
                                 </h3>
-                                <div className="inline-block bg-blue-600 text-white px-4 py-1.5 rounded-full font-black text-xs shadow-md shadow-blue-500/10 border border-blue-400/20">
+                                <div className="inline-block bg-blue-600 text-white px-4 py-1.5 rounded-full font-black text-xs border border-blue-400/20">
                                     Token {activeToken === 'None' ? 'None' : `#${activeToken}`}
                                 </div>
                             </div>
 
-                            <button
-                                onClick={handleCallNextPatient}
-                                className="w-full p-4 rounded-xl font-bold text-xs tracking-wider uppercase transition-all duration-200 border-none flex items-center justify-center gap-2 shadow-md bg-blue-600 hover:bg-blue-500 text-white cursor-pointer shadow-blue-500/20"
-                            >
-                                👤+ CALL NEXT PATIENT
-                            </button>
+                            <div className="flex flex-col gap-3">
+                                {hasActivePatient && isQueueEmpty ? (
+                                    <button
+                                        onClick={handleCompleteSession}
+                                        className="w-full p-4 rounded-xl font-bold text-xs tracking-wider uppercase transition-all duration-200 border-none flex items-center justify-center gap-2 shadow-md bg-green-600 hover:bg-green-500 text-white cursor-pointer shadow-green-500/20"
+                                    >
+                                        <span>✔ COMPLETE CONSULTATION</span>
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleCallNextPatient}
+                                        disabled={isQueueEmpty}
+                                        className={`w-full p-4 rounded-xl font-bold text-xs tracking-wider uppercase transition-all duration-200 border-none flex items-center justify-center gap-2 shadow-md text-white ${
+                                            isQueueEmpty ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 cursor-pointer shadow-blue-500/20'
+                                        }`}
+                                    >
+                                        <span>👤+ CALL NEXT PATIENT</span>
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={handleGlobalNoShow}
+                                    disabled={!hasActivePatient}
+                                    className={`w-full p-4 rounded-xl font-bold text-xs tracking-wider uppercase transition-all duration-200 border flex items-center justify-center gap-2 ${
+                                        !hasActivePatient 
+                                            ? 'bg-transparent text-slate-600 border-slate-800 cursor-not-allowed' 
+                                            : 'bg-transparent text-red-500 border-red-500 hover:bg-red-500/10 cursor-pointer'
+                                    }`}
+                                >
+                                    <span>❌ MARK CURRENT NO-SHOW</span>
+                                </button>
+                            </div>
                         </div>
 
                         {/* Metrics Panel */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-white p-5 rounded-2xl text-center border border-slate-200/70 shadow-sm hover:shadow-md transition-shadow">
                                 <span className="text-xl inline-block p-2 bg-amber-50 rounded-xl text-amber-600">🕒</span>
-                                <div className="text-[9px] text-slate-400 font-bold uppercase mt-3 mb-0.5 tracking-widest">Total Waiting</div>
+                                <div className="text-[11px] text-slate-400 font-bold uppercase mt-3 mb-0.5 tracking-widest">Total Waiting</div>
                                 <div className="text-sm font-black text-slate-900">{waitingCount} Patients</div>
                             </div>
                             <div className="bg-white p-5 rounded-2xl text-center border border-slate-200/70 shadow-sm hover:shadow-md transition-shadow">
                                 <span className="text-xl inline-block p-2 bg-emerald-50 rounded-xl text-emerald-600">👨‍⚕️</span>
-                                <div className="text-[9px] text-slate-400 font-bold uppercase mt-3 mb-0.5 tracking-widest">Served Today</div>
+                                <div className="text-[11px] text-slate-400 font-bold uppercase mt-3 mb-0.5 tracking-widest">Served Today</div>
                                 <div className="text-sm font-black text-slate-900">{servedTodayCount} Patients</div>
                             </div>
                         </div>

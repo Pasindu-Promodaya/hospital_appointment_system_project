@@ -1,17 +1,22 @@
 package com.hospital.appointment.system.service;
 
 import com.hospital.appointment.system.dto.DoctorRegisterDTO;
+import com.hospital.appointment.system.model.Appointment;
+import com.hospital.appointment.system.model.AppointmentStatus;
 import com.hospital.appointment.system.model.Doctor;
 import com.hospital.appointment.system.model.DoctorSchedule;
 import com.hospital.appointment.system.model.User;
 import com.hospital.appointment.system.model.UserRole;
+import com.hospital.appointment.system.repository.AppointmentRepository;
 import com.hospital.appointment.system.repository.DoctorRepository;
 import com.hospital.appointment.system.repository.ScheduleRepository;
 import com.hospital.appointment.system.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,7 +35,13 @@ public class DoctorService {
     @Autowired
     private ScheduleRepository scheduleRepository;
 
-    // Register a new doctor and create their user account
+    @Autowired
+    private AppointmentRepository appointmentRepository; 
+
+    // Inject the BCrypt Password Encoder configured in your Spring Security setup
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Transactional
     public Doctor registerNewDoctor(DoctorRegisterDTO dto) {
         if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
@@ -39,7 +50,10 @@ public class DoctorService {
 
         User user = new User();
         user.setEmail(dto.getEmail());
-        user.setPasswordHash(dto.getPassword());
+        
+        // Hash the plaintext password from the DTO before saving it to the database
+        user.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
+        
         user.setRole(UserRole.DOCTOR);
 
         Doctor doctor = new Doctor();
@@ -57,26 +71,21 @@ public class DoctorService {
         return doctorRepository.save(doctor);
     }
 
-    // Get all registered doctors from the database
     public List<Doctor> getAllDoctors() {
         return doctorRepository.findAll();
     }
 
-    // Save or update a doctor profile
     public Doctor saveDoctor(Doctor doctor) {
         return doctorRepository.save(doctor);
     }
 
-    // Get active doctors filtered by their specialty
     public List<Doctor> getDoctorsBySpecialty(String specialty) {
-        // 🎯 FIXED: Updated query methods to match the activeStatus field name
         if (specialty == null || specialty.isEmpty() || specialty.equalsIgnoreCase("All")) {
             return doctorRepository.findByActiveStatusTrue();
         }
         return doctorRepository.findBySpecializationContainingIgnoreCaseAndActiveStatusTrue(specialty);
     }
 
-    // Save a new doctor schedule
     public DoctorSchedule saveSchedule(DoctorSchedule schedule) {
         if (schedule == null || schedule.getDoctor() == null || schedule.getDoctor().getId() == null) {
             throw new RuntimeException("Cannot record schedule: Target Doctor identification data is missing.");
@@ -90,7 +99,6 @@ public class DoctorService {
         return scheduleRepository.save(schedule);
     }
 
-    // Generate available time slots based on doctor shift duration
     public List<LocalTime> generateAvailableSlots(Long scheduleId) {
         DoctorSchedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new RuntimeException("Requested schedule profile not found"));
@@ -108,7 +116,6 @@ public class DoctorService {
         return slots;
     }
 
-    // Get sample data for today's live queue diagnostics
     public List<Map<String, Object>> getTodayQueue(Long doctorId) {
         if (!doctorRepository.existsById(doctorId)) {
             throw new RuntimeException("Practitioner tracking sequence ID " + doctorId + " does not exist.");
@@ -121,12 +128,38 @@ public class DoctorService {
         diagnosticPatient.put("ticket", "TKN-001");
         diagnosticPatient.put("name", "John Doe");
         diagnosticPatient.put("time", "09:00 AM");
-        diagnosticPatient.put("status", "serving");
+        diagnosticPatient.put("status", "CALLED"); // MUST BE CALLED
         diagnosticPatient.put("phone", "+94 77 123 4567");
         diagnosticPatient.put("email", "johndoe@example.com");
         diagnosticPatient.put("reason", "Frequent severe migraine checks and neurological baseline review.");
 
         liveQueue.add(diagnosticPatient);
         return liveQueue;
+    }
+
+    /**
+     * 🎯 DASHBOARD NO-SHOW LOGIC
+     */
+    @Transactional
+    public void cycleNoShowPatientToEnd(Long appointmentId) {
+        Appointment missedPatient = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Appointment record not found for ID: " + appointmentId));
+
+        // MUST BE CALLED to match teammate's implementation
+        if (missedPatient.getStatus() == AppointmentStatus.CALLED) {
+            
+            // Revert back to CONFIRMED
+            missedPatient.setStatus(AppointmentStatus.CONFIRMED);
+
+            // Push to max queue order
+            Integer maxCurrentOrder = appointmentRepository.findMaxQueueOrderForDoctor(
+                    missedPatient.getDoctorId(), LocalDate.now()
+            );
+
+            int newEndPosition = (maxCurrentOrder != null) ? maxCurrentOrder + 1 : 1;
+            missedPatient.setQueueOrder(newEndPosition);
+
+            appointmentRepository.save(missedPatient);
+        }
     }
 }

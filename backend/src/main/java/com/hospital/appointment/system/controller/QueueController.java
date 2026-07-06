@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/queue")
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+// 🎯 FIXED: Removed local @CrossOrigin to force the use of global CorsConfig.java
 public class QueueController {
 
     @Autowired

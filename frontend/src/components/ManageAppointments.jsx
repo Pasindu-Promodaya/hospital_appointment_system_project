@@ -1,28 +1,39 @@
 import React, { useEffect, useState } from 'react';
 
 export default function ManageAppointments({ patientId }) {
-  // 🎯 FIXED: Absolute path ensuring connection to your local Spring Boot server node
   const API_BASE_URL = 'http://localhost:8080/api';
 
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // State used to manage inline rescheduling actions.
-  const [reschedulingId, setReschedulingId] = useState(null);
-  const [targetDate, setTargetDate] = useState('');
-  const [availableSlots, setAvailableSlots] = useState([]);
-  const [selectedSlot, setSelectedSlot] = useState('');
-  const [fetchingSlots, setFetchingSlots] = useState(false);
+  
+  // State to hold our Doctor ID -> Doctor Name mapping
+  const [doctorDirectory, setDoctorDirectory] = useState({});
 
   // State for in-page confirmation and notifications.
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [apptToCancel, setApptToCancel] = useState(null);
   const [customNotification, setCustomNotification] = useState({ visible: false, type: '', text: '' });
 
+  // Fetch all doctors on mount so we can match their IDs to their real names
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/admin/doctors`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const mapping = {};
+          data.forEach(doc => {
+            // Adjust field names if your backend uses 'name' instead of 'firstName'
+            mapping[doc.id] = `Dr. ${doc.firstName} ${doc.lastName}`;
+          });
+          setDoctorDirectory(mapping);
+        }
+      })
+      .catch(err => console.error("Could not fetch doctor directory mapping", err));
+  }, []);
+
   const fetchAppointments = () => {
     setLoading(true);
     
-    // 🎯 SELF-HEALING BACKUP: If patientId isn't passed as a prop, dynamically resolve it from localStorage
     let activeId = patientId;
     if (!activeId) {
       try {
@@ -33,9 +44,7 @@ export default function ManageAppointments({ patientId }) {
       }
     }
 
-    // Safeguard: If no ID can be found anywhere, break out of loading to prevent an endless spinner
     if (!activeId) {
-      console.warn("ManageAppointments mounted without a valid Patient Identifier Context.");
       setAppointments([]);
       setLoading(false);
       return;
@@ -45,10 +54,7 @@ export default function ManageAppointments({ patientId }) {
       headers: { 'X-Patient-Id': String(activeId) }
     })
       .then(async res => {
-        if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(errorText || 'Unable to fetch appointments.');
-        }
+        if (!res.ok) throw new Error(await res.text());
         return res.json();
       })
       .then(data => {
@@ -58,40 +64,13 @@ export default function ManageAppointments({ patientId }) {
       .catch(() => {
         setAppointments([]);
         setLoading(false);
-        showPopupMessage('error', 'Unable to load your appointments because the service is currently unavailable.');
+        showPopupMessage('error', 'Unable to load your appointments.');
       });
   };
 
-  // 🎯 FIXED: Fires seamlessly on mount and updates whenever patientId properties switch
   useEffect(() => {
     fetchAppointments();
   }, [patientId]);
-
-  useEffect(() => {
-    if (!reschedulingId || !targetDate) return;
-    const activeAppt = appointments.find(a => a.id === reschedulingId);
-    if (!activeAppt) return;
-
-    setFetchingSlots(true);
-    fetch(`${API_BASE_URL}/appointments/available-slots?doctorId=${activeAppt.doctorId}&date=${targetDate}`)
-      .then(async res => {
-        if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(errorText || 'Unavailable slots.');
-        }
-        return res.json();
-      })
-      .then(slots => {
-        setAvailableSlots(Array.isArray(slots) ? slots : []);
-        setSelectedSlot('');
-        setFetchingSlots(false);
-      })
-      .catch(() => {
-        setAvailableSlots([]);
-        setFetchingSlots(false);
-        showPopupMessage('error', 'Unable to fetch available time slots for the selected date.');
-      });
-  }, [targetDate, reschedulingId, appointments]);
 
   const showPopupMessage = (type, text) => {
     setCustomNotification({ visible: true, type, text });
@@ -105,11 +84,7 @@ export default function ManageAppointments({ patientId }) {
   const executeCancel = () => {
     if (!apptToCancel) return;
 
-    let activeId = patientId;
-    if (!activeId) {
-      const session = JSON.parse(localStorage.getItem("userSession") || "{}");
-      activeId = session.userId || session.id;
-    }
+    let activeId = patientId || JSON.parse(localStorage.getItem("userSession") || "{}").id;
 
     fetch(`${API_BASE_URL}/appointments/${apptToCancel}/cancel`, {
       method: 'PUT',
@@ -123,78 +98,32 @@ export default function ManageAppointments({ patientId }) {
         setApptToCancel(null);
         if (res.ok) {
           showPopupMessage('success', 'Your appointment slot has been successfully cancelled.');
-          fetchAppointments();
+          fetchAppointments(); // Refresh the list to show the "Cancelled" badge
         } else {
-          const errorText = await res.text();
-          showPopupMessage('error', errorText || 'Could not process the cancellation request.');
+          showPopupMessage('error', await res.text() || 'Could not process cancellation.');
         }
       })
-      .catch(() => {
-        showPopupMessage('error', 'The cancellation service is currently unavailable. Please try again later.');
-      });
+      .catch(() => showPopupMessage('error', 'The cancellation service is currently unavailable.'));
   };
 
-  const handleRescheduleSubmit = (appointmentId) => {
-    if (!targetDate || !selectedSlot) {
-      showPopupMessage('warning', 'Please select both an appointment target date and an available time slot.');
-      return;
-    }
-
-    let activeId = patientId;
-    if (!activeId) {
-      const session = JSON.parse(localStorage.getItem("userSession") || "{}");
-      activeId = session.userId || session.id;
-    }
-
-    fetch(`${API_BASE_URL}/appointments/${appointmentId}/reschedule`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Patient-Id': String(activeId)
-      },
-      body: JSON.stringify({ newDate: targetDate, newTimeSlot: selectedSlot })
-    })
-      .then(async res => {
-        if (res.ok) {
-          showPopupMessage('success', 'Rescheduled successfully! The request has been routed for staff approval.');
-          setReschedulingId(null);
-          setTargetDate('');
-          setAvailableSlots([]);
-          fetchAppointments();
-        } else {
-          const errorText = await res.text();
-          showPopupMessage('error', errorText || 'Could not update the appointment schedule right now.');
-        }
-      })
-      .catch(() => {
-        showPopupMessage('error', 'The rescheduling service is currently unavailable. Please try again later.');
-      });
-  };
-
+  // Replaced "Pending Approval" with a single "Confirmed" state for all active bookings
   const getStatusBadge = (status) => {
-    switch (status) {
-      case 'CONFIRMED':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            Confirmed
-          </span>
-        );
-      case 'CANCELLED':
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-            Cancelled
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-            Pending Approval
-          </span>
-        );
+    if (status === 'CANCELLED') {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+          Cancelled
+        </span>
+      );
     }
+    
+    // Everything else (PENDING, CONFIRMED, etc.) shows as Confirmed to the patient
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        Appointment Confirmed
+      </span>
+    );
   };
 
   if (loading) {
@@ -254,8 +183,13 @@ export default function ManageAppointments({ patientId }) {
                           </svg>
                         </div>
                         <div>
-                          <h4 className="text-base font-bold text-slate-900">{appt.doctorName}</h4>
-                          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">{appt.specialization}</p>
+                          {/* Looks up the real name from our directory map! */}
+                          <h4 className="text-base font-bold text-slate-900">
+                            {appt.doctorName || doctorDirectory[appt.doctorId] || `Doctor #${appt.doctorId}`}
+                          </h4>
+                          {appt.specialization && (
+                            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-600">{appt.specialization}</p>
+                          )}
                         </div>
                         <div className="ml-auto md:ml-2">
                           {getStatusBadge(appt.status)}
@@ -280,95 +214,27 @@ export default function ManageAppointments({ patientId }) {
                       {appt.status !== 'CANCELLED' && (
                         <div className="mt-4 flex flex-wrap gap-2">
                           <span className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-blue-700">
-                            Token {appt.tokenNumber}
+                            Token {appt.tokenNumber || 0}
                           </span>
                           <span className="rounded-xl border border-purple-100 bg-purple-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-purple-700">
-                            Queue {appt.queueOrder}
+                            Queue {appt.queueOrder || 1}
                           </span>
                         </div>
                       )}
                     </div>
 
-                    {appt.status === 'PENDING' && reschedulingId !== appt.id && (
-                      <div className="flex w-full gap-2 md:w-auto md:flex-col">
-                        <button
-                          onClick={() => {
-                            setReschedulingId(appt.id);
-                            setTargetDate('');
-                            setAvailableSlots([]);
-                          }}
-                          className="flex-1 rounded-2xl bg-blue-600 px-4 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-blue-700"
-                        >
-                          Reschedule
-                        </button>
+                    {/* Always allow cancelling unless it's already cancelled! */}
+                    {appt.status !== 'CANCELLED' && (
+                      <div className="flex w-full md:w-auto mt-4 md:mt-0">
                         <button
                           onClick={() => triggerCancelModal(appt.id)}
-                          className="flex-1 rounded-2xl border border-rose-200 bg-white px-4 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-rose-600 transition hover:bg-rose-50"
+                          className="w-full rounded-2xl border border-rose-200 bg-white px-6 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 md:w-auto"
                         >
-                          Cancel
+                          Cancel Appointment
                         </button>
                       </div>
                     )}
                   </div>
-
-                  {reschedulingId === appt.id && (
-                    <div className="mt-4 rounded-3xl border border-blue-100 bg-gradient-to-r from-blue-50/50 to-slate-50 p-4">
-                      <div className="mb-4 flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-blue-600"></span>
-                        <h5 className="text-[11px] font-bold uppercase tracking-[0.3em] text-slate-500">Select new schedule window</h5>
-                      </div>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.3em] text-slate-500">Target Date</label>
-                          <input
-                            type="date"
-                            min={new Date().toISOString().split('T')[0]}
-                            value={targetDate}
-                            onChange={(e) => setTargetDate(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-1 block text-[11px] font-bold uppercase tracking-[0.3em] text-slate-500">Available Times</label>
-                          <select
-                            disabled={!targetDate || fetchingSlots || availableSlots.length === 0}
-                            value={selectedSlot}
-                            onChange={(e) => setSelectedSlot(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:bg-slate-50"
-                          >
-                            <option value="">
-                              {fetchingSlots ? 'Fetching windows...' : targetDate && availableSlots.length === 0 ? 'No slots available' : '-- Choose Slot --'}
-                            </option>
-                            {availableSlots.map(slot => (
-                              <option key={slot} value={slot}>{slot.substring(0, 5)}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-                      {targetDate && !fetchingSlots && availableSlots.length === 0 && (
-                        <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-medium text-rose-700">
-                          The doctor is fully booked on this date. Please choose another day.
-                        </div>
-                      )}
-
-                      <div className="mt-4 flex justify-end gap-2 border-t border-slate-200 pt-3">
-                        <button
-                          onClick={() => setReschedulingId(null)}
-                          className="rounded-2xl px-4 py-2 text-xs font-semibold text-slate-500 transition hover:text-slate-800"
-                        >
-                          Dismiss
-                        </button>
-                        <button
-                          onClick={() => handleRescheduleSubmit(appt.id)}
-                          disabled={!selectedSlot || availableSlots.length === 0}
-                          className="rounded-2xl bg-blue-600 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
-                        >
-                          Confirm change
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -376,7 +242,7 @@ export default function ManageAppointments({ patientId }) {
         </div>
       </div>
 
-      {/* Cancellation confirmation modal. */}
+      {/* Cancellation confirmation modal */}
       {cancelModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4 transition-all duration-300">
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-100 text-center space-y-5 transform transition-all scale-100 animate-in fade-in zoom-in-95 duration-150">
@@ -407,7 +273,7 @@ export default function ManageAppointments({ patientId }) {
         </div>
       )}
 
-      {/* Notification dialog for operation feedback. */}
+      {/* Notification dialog */}
       {customNotification.visible && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4 transition-all duration-300">
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-slate-100 text-center space-y-5 transform transition-all scale-100 animate-in fade-in zoom-in-95 duration-150">
@@ -440,7 +306,6 @@ export default function ManageAppointments({ patientId }) {
           </div>
         </div>
       )}
-
     </div>
   );
 }

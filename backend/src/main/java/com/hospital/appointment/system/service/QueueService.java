@@ -1,6 +1,5 @@
 package com.hospital.appointment.system.service;
-import com.hospital.appointment.system.model.Appointment;
-import com.hospital.appointment.system.model.AppointmentStatus;
+
 import com.hospital.appointment.system.dto.QueueResponseDTO;
 import com.hospital.appointment.system.model.Appointment;
 import com.hospital.appointment.system.model.AppointmentStatus;
@@ -12,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class QueueService {
@@ -24,13 +22,13 @@ public class QueueService {
     public QueueResponseDTO getDoctorQueueStatus(Long doctorId) {
         LocalDate today = LocalDate.now();
 
-        // get the current active patient
-        Optional<Appointment> active = appointmentRepository
-                .findByDoctorIdAndAppointmentDateAndStatus(doctorId, today, AppointmentStatus.CALLED);
+        // 🎯 BULLETPROOF FIX: Use List instead of Optional to prevent NonUniqueResultException crashes
+        List<Appointment> activeList = appointmentRepository
+                .findByDoctorIdAndAppointmentDateAndStatusOrderByQueueOrderAsc(doctorId, today, AppointmentStatus.CALLED);
 
-        // get remaining waiting patients
+        // 🎯 FIXED: Changed PENDING to CONFIRMED to match the booking system
         List<Appointment> pendingList = appointmentRepository
-                .findByDoctorIdAndAppointmentDateAndStatusOrderByQueueOrderAsc(doctorId, today, AppointmentStatus.PENDING);
+                .findByDoctorIdAndAppointmentDateAndStatusOrderByQueueOrderAsc(doctorId, today, AppointmentStatus.CONFIRMED);
 
         //count completed patients for metrics panel
         List<Appointment> completedList = appointmentRepository
@@ -40,8 +38,8 @@ public class QueueService {
         String activeToken = "None";
         String activePatientName = "None";
 
-        if (active.isPresent()) {
-            Appointment activeApp = active.get();
+        if (!activeList.isEmpty()) {
+            Appointment activeApp = activeList.get(0); // Safely grab the first one
             // convert integer token to string safely
             activeToken = String.valueOf(activeApp.getTokenNumber());
             // use patient id as fallback name since getPatient() does not exist
@@ -64,7 +62,7 @@ public class QueueService {
                 waitingCount,
                 servedCount,
                 "12 mins",
-                null,
+                getActiveAppointmentsList(doctorId),
                 auditLogs
         );
     }
@@ -74,19 +72,20 @@ public class QueueService {
     public void processNextPatient(Long doctorId) {
         LocalDate today = LocalDate.now();
 
-        // complete current consultation
-        Optional<Appointment> currentActive = appointmentRepository
-                .findByDoctorIdAndAppointmentDateAndStatus(doctorId, today, AppointmentStatus.CALLED);
+        // 🎯 BULLETPROOF FIX: Sweeps up ALL patients stuck in CALLED status and completes them
+        List<Appointment> currentActiveList = appointmentRepository
+                .findByDoctorIdAndAppointmentDateAndStatusOrderByQueueOrderAsc(doctorId, today, AppointmentStatus.CALLED);
 
-        if (currentActive.isPresent()) {
-            Appointment activeApp = currentActive.get();
-            activeApp.setStatus(AppointmentStatus.COMPLETED);
-            appointmentRepository.save(activeApp);
+        if (!currentActiveList.isEmpty()) {
+            for (Appointment activeApp : currentActiveList) {
+                activeApp.setStatus(AppointmentStatus.COMPLETED);
+                appointmentRepository.save(activeApp);
+            }
         }
 
-        // load pending stack
+        // load pending stack 
         List<Appointment> pendingList = appointmentRepository
-                .findByDoctorIdAndAppointmentDateAndStatusOrderByQueueOrderAsc(doctorId, today, AppointmentStatus.PENDING);
+                .findByDoctorIdAndAppointmentDateAndStatusOrderByQueueOrderAsc(doctorId, today, AppointmentStatus.CONFIRMED);
 
         if (pendingList.isEmpty()) {
             throw new RuntimeException("No remaining patients left waiting in the queue buffer.");
@@ -103,10 +102,14 @@ public class QueueService {
         LocalDate today = LocalDate.now();
         List<Appointment> completeList = new ArrayList<>();
 
-        appointmentRepository.findByDoctorIdAndAppointmentDateAndStatus(doctorId, today, AppointmentStatus.CALLED)
-                .ifPresent(completeList::add);
+        // 1. Add the patient currently in the room (CALLED)
+        completeList.addAll(appointmentRepository.findByDoctorIdAndAppointmentDateAndStatusOrderByQueueOrderAsc(doctorId, today, AppointmentStatus.CALLED));
 
-        completeList.addAll(appointmentRepository.findByDoctorIdAndAppointmentDateAndStatusOrderByQueueOrderAsc(doctorId, today, AppointmentStatus.PENDING));
+        // 2. Add the patients waiting in line (CONFIRMED)
+        completeList.addAll(appointmentRepository.findByDoctorIdAndAppointmentDateAndStatusOrderByQueueOrderAsc(doctorId, today, AppointmentStatus.CONFIRMED));
+
+        // 3. Add the patients who are already done (COMPLETED) at the bottom
+        completeList.addAll(appointmentRepository.findByDoctorIdAndAppointmentDateAndStatusOrderByQueueOrderAsc(doctorId, today, AppointmentStatus.COMPLETED));
 
         return completeList;
     }

@@ -19,6 +19,7 @@ public class AdminController {
     @Autowired
     private DoctorService doctorService;
 
+    // Endpoint for Admin to register a new Doctor
     @PostMapping("/register-doctor")
     public ResponseEntity<?> registerDoctor(@RequestBody DoctorRegisterDTO doctorRegisterDTO) {
         try {
@@ -31,7 +32,8 @@ public class AdminController {
         }
     }
 
-    // export registered practitioner details straight into dropdown components
+    // Export registered practitioner details straight into dropdown components
+    // NOTE: Because of the class-level @RequestMapping, this URL is: GET /api/admin/doctors
     @GetMapping("/doctors")
     public ResponseEntity<List<Doctor>> getAllRegisteredDoctors() {
         // execute service array query call

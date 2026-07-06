@@ -11,7 +11,9 @@ export default function DoctorDirectory() {
     const navigate = useNavigate();
     const { user } = useAuth();
 
-    const specialties = ['All', 'Cardiology', 'Neurology', 'Pediatrics', 'Dermatology', 'General Medicine'];
+    // 🎯 FIXED: Aligned these filter tabs to exactly match the database values 
+    // saved by the AdminDashboard's registration dropdown.
+    const specialties = ['All', 'Cardiologist', 'Neurologist', 'Pediatrician', 'General Practitioner', 'Dermatology'];
 
     useEffect(() => {
         setLoading(true);
@@ -125,7 +127,7 @@ export default function DoctorDirectory() {
                 </div>
 
                 {/* Specialty Filter Tabs */}
-                <div className="flex justify-center gap-2 flex-wrap mb-12 bg-white border border-slate-200/60 p-1.5 rounded-full max-w-2xl mx-auto shadow-sm shadow-slate-100">
+                <div className="flex justify-center gap-2 flex-wrap mb-12 bg-white border border-slate-200/60 p-1.5 rounded-full max-w-3xl mx-auto shadow-sm shadow-slate-100">
                     {specialties.map((spec) => (
                         <button
                             key={spec}

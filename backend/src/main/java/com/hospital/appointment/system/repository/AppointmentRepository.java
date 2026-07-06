@@ -60,11 +60,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             "WHERE a.patient_id = :patientId ORDER BY a.appointment_date DESC, a.time_slot DESC", nativeQuery = true)
     List<Object[]> findAppointmentsWithDoctorDetails(@Param("patientId") Long patientId);
 
-    // Comprehensive query evaluating today's total active queue with attached patient contacts
-    @Query(value = "SELECT a.id, a.token_number, a.patient_name, a.appointment_date, " +
-            "a.time_slot, a.status, a.medical_problem, p.phone AS patient_phone, p.email AS patient_email " +
+    // 🎯 FIXED: Dynamically pulls real first and last names from the patients table profile rows.
+    // Falls back gracefully to a.patient_name if the user hasn't created a patient profile record.
+    @Query(value = "SELECT a.id, a.token_number, " +
+            "COALESCE(NULLIF(TRIM(CONCAT(p.first_name, ' ', p.last_name)), ''), a.patient_name) AS patient_name, " +
+            "a.appointment_date, a.time_slot, a.status, a.medical_problem, " +
+            "p.phone AS patient_phone, p.email AS patient_email " +
             "FROM appointments a " +
-            "JOIN patients p ON a.patient_id = p.id " +
+            "LEFT JOIN patients p ON a.patient_id = p.user_id " + 
             "WHERE a.doctor_id = :doctorId AND a.appointment_date = :date " +
             "ORDER BY a.queue_order ASC", nativeQuery = true)
     List<Object[]> findTodayQueueByDoctorAndDate(@Param("doctorId") Long doctorId, @Param("date") LocalDate date);

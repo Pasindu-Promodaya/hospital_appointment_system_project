@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 // Layout & Shared Components
 import Layout from './components/Layout';
+import Navbar from './components/Navbar';
 
 import Login from './pages/StaffLogin';
 import PatientLogin from './PatientLogin';
