@@ -143,7 +143,7 @@ export default function BookAppointment({ patientId }) {
     setSubmitLoading(true);
     setUiMessage({ type: '', text: '' });
 
-    // 🎯 STRICT FIX: Prioritize explicit profile properties. Removed user.id and user.userId entirely!
+   
     let activeId = patientId || user?.patientId || user?.linkedPatientId;
     
     if (!activeId) {
@@ -163,8 +163,8 @@ export default function BookAppointment({ patientId }) {
       }
     }
 
-    // 🎯 SAFETY EMERGENCY BLOCK: If your active session does not contain a patient profile token field, 
-    // it will throw a readable validation alert on your dashboard instead of silently writing a 22 or a 1.
+     
+    
     if (!activeId) {
       setUiMessage({ 
         type: 'error', 

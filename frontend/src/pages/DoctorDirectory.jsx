@@ -11,7 +11,6 @@ export default function DoctorDirectory() {
     const navigate = useNavigate();
     const { user } = useAuth();
 
-    // 🎯 FIXED: Aligned these filter tabs to exactly match the database values 
     // saved by the AdminDashboard's registration dropdown.
     const specialties = ['All', 'Cardiologist', 'Neurologist', 'Pediatrician', 'General Practitioner', 'Dermatology'];
 
@@ -25,7 +24,7 @@ export default function DoctorDirectory() {
         fetch(url)
             .then(res => res.json())
             .then(data => {
-                // 🛡️ Safety Check: Only set doctors if data is a valid array
+                //  Safety Check: Only set doctors if data is a valid array
                 if (Array.isArray(data)) {
                     setDoctors(data);
                 } else {
@@ -43,7 +42,11 @@ export default function DoctorDirectory() {
 
     const handleBookingClick = (doc) => {
         const userRole = user?.role || localStorage.getItem('role');
-        const resolvedDoctorName = doc.name || `Dr. ${doc.firstName} ${doc.lastName}`;
+        
+        // 🎯 FIXED: Direct prefix normalization rules tracking for booking data context passing
+        const resolvedDoctorName = doc.firstName && doc.lastName 
+            ? `Dr. ${doc.firstName} ${doc.lastName}` 
+            : (doc.name?.startsWith('Dr.') ? doc.name : `Dr. ${doc.name || 'Specialist'}`);
 
         const bookingContext = {
             doctor: {
@@ -66,10 +69,12 @@ export default function DoctorDirectory() {
         }
     };
 
-    // 🛡️ Safety Check: Safely filter only if doctors state is a valid array
+    // Safety Check: Safely filter only if doctors state is a valid array
     const filteredDoctors = Array.isArray(doctors)
         ? doctors.filter(doc => {
-            const fullName = (doc.name || `${doc.firstName} ${doc.lastName}`).toLowerCase();
+            const fullName = (doc.firstName && doc.lastName 
+                ? `${doc.firstName} ${doc.lastName}` 
+                : (doc.name || '')).toLowerCase();
             return fullName.includes(searchTerm.toLowerCase());
         })
         : [];
@@ -167,7 +172,8 @@ export default function DoctorDirectory() {
                                         <div className="space-y-1">
                                             <div className="flex flex-wrap items-center gap-1.5">
                                                 <h3 className="text-base font-extrabold text-slate-900 tracking-tight leading-tight">
-                                                    {doc.name || `Dr. ${doc.firstName} ${doc.lastName}`}
+                                                   
+                                                    {doc.firstName && doc.lastName ? `Dr. ${doc.firstName} ${doc.lastName}` : (doc.name || "Specialist Profile")}
                                                 </h3>
                                                 <span className="inline-flex items-center gap-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100 shadow-sm shrink-0">
                                                     🛡️ Verified License

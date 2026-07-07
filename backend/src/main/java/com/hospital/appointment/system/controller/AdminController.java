@@ -30,7 +30,7 @@ public class AdminController {
             // 1. Persist the new physician and handle entity database conversions
             Doctor savedDoctor = doctorService.registerNewDoctor(doctorRegisterDTO);
             
-            // 🎯 AUTOMATED ONBOARDING HOOK: Send credentials directly to the physician's email inbox
+           
             try {
                 String fullPractitionerName = "Dr. " + savedDoctor.getFirstName() + " " + savedDoctor.getLastName();
                 
@@ -55,11 +55,10 @@ public class AdminController {
         }
     }
 
-    // Export registered practitioner details straight into dropdown components
-    // NOTE: Because of the class-level @RequestMapping, this URL is: GET /api/admin/doctors
+    
     @GetMapping("/doctors")
     public ResponseEntity<List<Doctor>> getAllRegisteredDoctors() {
-        // execute service array query call
+        
         List<Doctor> activeDoctorsList = doctorService.getAllDoctors();
         return ResponseEntity.ok(activeDoctorsList);
     }

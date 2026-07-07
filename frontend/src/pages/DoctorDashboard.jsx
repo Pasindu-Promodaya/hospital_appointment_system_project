@@ -192,7 +192,7 @@ export default function DoctorDashboard() {
     if (isSaving || !currentDoctorId) return;
 
     if (endTime <= startTime) {
-      alert('⚠️ End time must be after start time.');
+      alert(' End time must be after start time.');
       return;
     }
 

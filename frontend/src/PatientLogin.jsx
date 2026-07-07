@@ -29,17 +29,17 @@ const Login = () => {
       const data = response.data;
 
       if (response.status === 200) {
-        // 🎯 INTERCEPT & NORMALIZE: Ensure variations like 'PATIENT' or 'ROLE_PATIENT' are treated uniformly
+        
         const rawRole = data.role || 'ROLE_PATIENT';
         const normalizedRole = rawRole.toUpperCase().trim() === 'PATIENT' ? 'ROLE_PATIENT' : rawRole;
 
         const sessionPayload = {
           token: data.token,
           email: data.email,
-          role: normalizedRole,        // Normalized role ensures authorization compatibility across components
-          id: data.id || null,         // Holds user account ID (e.g., 22)
-          userId: data.id || null,     // Double structural backup alignment
-          patientId: data.patientId || null // Extract the true Patient Profile ID (e.g., 15)
+          role: normalizedRole,        
+          id: data.id || null,         
+          userId: data.id || null,     
+          patientId: data.patientId || null 
         };
 
         // Safely map verification tokens into your dynamic global context layer
@@ -65,7 +65,7 @@ const Login = () => {
       const backendErrorMessage =
         err.response?.data?.message ||
         err.response?.data ||
-        "Authentication node unreachable. Please verify Spring Boot is running on port 8080.";
+        "Authentication node unreachable. Please verify Spring Boot is running on port 8080 and credentials are correct.";
 
       setError(String(backendErrorMessage));
     } finally {

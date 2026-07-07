@@ -5,11 +5,7 @@ export default function ManageAppointments({ patientId }) {
 
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // State to hold our Doctor ID -> Doctor Name mapping
   const [doctorDirectory, setDoctorDirectory] = useState({});
-
-  // State for in-page confirmation and notifications.
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [apptToCancel, setApptToCancel] = useState(null);
   const [customNotification, setCustomNotification] = useState({ visible: false, type: '', text: '' });
@@ -42,7 +38,7 @@ export default function ManageAppointments({ patientId }) {
   const fetchAppointments = () => {
     setLoading(true);
     
-    // 🎯 ALIGNMENT FIX: Prioritize explicit patient profile ID fields over account/user reference tokens!
+    //  Prioritize explicit patient profile ID fields over account/user reference tokens!
     let activeId = patientId;
     if (!activeId) {
       try {

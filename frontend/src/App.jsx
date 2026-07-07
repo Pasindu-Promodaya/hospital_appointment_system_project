@@ -27,34 +27,34 @@ export default function App() {
     return (
         <Router>
             <Routes>
-                {/* 🔐 Public Fullscreen Auth Gateways (Bypasses Layout Overlays) */}
+                {/* Public Fullscreen Auth Gateways (Bypasses Layout Overlays) */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/patient-login" element={<PatientLogin />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/patient-auth" element={<PatientAuth />} />
 
-                {/* 🏥 Unified System Core Frame inside our clean Layout Component */}
+                {/*  Unified System Core Frame inside our clean Layout Component */}
                 <Route path="/" element={<Layout />}>
                     {/* Default fallback route inside layout */}
                     <Route index element={<Navigate to="/doctors" replace />} />
 
-                    {/* 🩺 Doctor & Admin Management Module Paths */}
+                    {/* Doctor & Admin Management Module Paths */}
                     <Route path="doctors" element={<DoctorDirectory />} />
                     <Route path="doctor-dashboard" element={<DoctorDashboard />} />
                     <Route path="admin" element={<AdminDashboard />} />
 
-                    {/* 👤 Patient Profile Module Paths */}
+                    {/* Patient Profile Module Paths */}
                     <Route path="patient-dashboard" element={<PatientDashboard />} />
                     {/* <Route path="notifications" element={<Notifications />} /> */}
 
-                    {/* 📅 Appointment Engine Module Paths */}
+                    {/*  Appointment Engine Module Paths */}
                     <Route path="booking" element={<Booking />} />
                     <Route path="book-appointment" element={<BookAppointment />} />
                     <Route path="appointments" element={<PatientAppointmentModule />} />
                     <Route path="manage-appointments" element={<ManageAppointments />} />
                 </Route>
 
-                {/* 🔄 Fallback Catch-All Redirect Engine Rule */}
+                {/* Fallback Catch-All Redirect Engine Rule */}
                 <Route path="*" element={<Navigate to="/doctors" replace />} />
             </Routes>
         </Router>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; 
 
-export default function Login() { // 🎯 FIX: Corrected from 'public default' to 'export default'
+export default function Login() { 
   const { login } = useAuth();
   const navigate = useNavigate();
   
@@ -50,7 +50,7 @@ export default function Login() { // 🎯 FIX: Corrected from 'public default' t
         // Sanitize string metrics to map routes completely safe from case discrepancies
         const sanitizedRole = String(data.role || '').trim().toUpperCase();
 
-        // 🎯 FIX: Changed Java-style '.contains()' to JavaScript '.includes()'
+        
         if (sanitizedRole.includes('DOCTOR')) {
           navigate('/doctor-dashboard');
         } else if (sanitizedRole.includes('ADMIN')) {
@@ -60,7 +60,7 @@ export default function Login() { // 🎯 FIX: Corrected from 'public default' t
         }
       } else {
         // Captures strict 403 Forbidden messages if a patient tries to slip through
-        setError(typeof data === 'object' ? (data.message || '⚠️ Invalid email or password.') : data);
+        setError(typeof data === 'object' ? (data.message || ' Invalid email or password.') : data);
       }
     } catch (err) {
       console.error('Handshake routing exception:', err);

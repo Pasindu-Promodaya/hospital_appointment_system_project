@@ -11,7 +11,7 @@ public class PatientService {
     @Autowired
     private PatientRepository patientRepository;
 
-    // 🎯 INTEGRATED NODE: Fetches profiles matching the relational user identity tracking key
+    // Fetches profiles matching the relational user identity tracking key
     public Patient getPatientByUserId(Long userId) {
         return patientRepository.findByUserId(userId)
                 .orElse(null); // Returns null so your controller drops a clean 404 block instead of crashing
@@ -24,7 +24,7 @@ public class PatientService {
         existingPatient.setFirstName(patientDetails.getFirstName());
         existingPatient.setLastName(patientDetails.getLastName());
         existingPatient.setPhone(patientDetails.getPhone());
-        existingPatient.setSex(patientDetails.getSex());
+        existingPatient.setGender(patientDetails.getGender());
         existingPatient.setBloodType(patientDetails.getBloodType());
         existingPatient.setChronicConditions(patientDetails.getChronicConditions());
         existingPatient.setKnownDrugAllergies(patientDetails.getKnownDrugAllergies());

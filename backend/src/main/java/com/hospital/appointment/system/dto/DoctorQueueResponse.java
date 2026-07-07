@@ -36,7 +36,7 @@ public class DoctorQueueResponse {
         this.patientEmail = patientEmail != null ? patientEmail : "Not Provided";
     }
 
-    // --- Getters ---
+    // Getters 
     public Long getId() { return id; }
     public String getTicket() { return ticket; }
     public int getTokenNumber() { return tokenNumber; }

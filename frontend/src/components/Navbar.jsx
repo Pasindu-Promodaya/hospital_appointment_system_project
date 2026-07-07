@@ -22,7 +22,7 @@ const Navbar = () => {
     const userRole = getActiveRole();
     const sanitizedRole = String(userRole || '').trim().toUpperCase();
 
-    // 🎯 REMOVED: Channel Alerts item has been cleanly excised from the schema list
+    
     const allMenuItems = [
         { path: '/doctor-dashboard', label: '👨‍⚕️ Doctor Portal', role: 'ROLE_DOCTOR', borderClass: 'hover:border-sky-600 active:border-sky-600', activeColor: '#0284c7' },
         { path: '/doctors', label: '⚕️ Doctors Directory', role: 'PUBLIC', borderClass: 'hover:border-sky-400 active:border-sky-400', activeColor: '#38bdf8' },
@@ -31,7 +31,7 @@ const Navbar = () => {
         { path: '/admin', label: '📊 Staff Roster', role: 'ROLE_ADMIN', borderClass: 'hover:border-amber-400 active:border-amber-400', activeColor: '#fbbf24' }
     ];
 
-    // 🌟 DYNAMIC FILTER ENGINE: Rules-based visibility matrix
+    //  Rules-based visibility matrix
     const visibleMenuItems = allMenuItems.filter(item => {
         // Rule 1: If no active user session exists, show ONLY public items
         if (!userRole || sanitizedRole === 'NULL' || sanitizedRole === '') {
@@ -129,7 +129,7 @@ const Navbar = () => {
 
                 <div>
                     <button className="bg-blue-600 hover:bg-blue-700 text-white border-none px-5 py-2.5 rounded-md font-bold text-xs cursor-pointer transition-colors duration-150">
-                        EMERGENCY LINE
+                        Call Support - 1990
                     </button>
                 </div>
             </div>

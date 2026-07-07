@@ -12,6 +12,6 @@ public interface ScheduleRepository extends JpaRepository<DoctorSchedule, Long> 
     
     List<DoctorSchedule> findByDoctorId(Long doctorId);
 
-    // 🎯 ADDED "First" to prevent crashes if there are duplicate schedules
+    
     Optional<DoctorSchedule> findFirstByDoctorIdAndDayOfWeek(Long doctorId, String dayOfWeek);
 }

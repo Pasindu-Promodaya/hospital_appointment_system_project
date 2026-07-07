@@ -4,10 +4,9 @@ public class AuthResponse {
     private String token;
     private String email;
     private String role;
-    private Long id; // User ID
-    private Long doctorId; // Shared profile ID slot internally
+    private Long id; 
+    private Long doctorId; 
 
-    // 🎯 CRITICAL: Kept exactly 5 parameters in this specific order to prevent compilation errors
     public AuthResponse(String token, String email, String role, Long id, Long doctorId) {
         this.token = token;
         this.email = email;
@@ -16,8 +15,8 @@ public class AuthResponse {
         this.doctorId = doctorId;
     }
 
-    // --- Dynamic JSON Aliasing ---
-    // This trick automatically exposes "patientId" in the JSON payload if the role matches!
+    // Custom Getters and Setters for Role-Based Access Control
+    // Expose patientId normally if it's a patient profile login
     public Long getPatientId() { 
         return "ROLE_PATIENT".equals(this.role) || "PATIENT".equals(this.role) ? this.doctorId : null; 
     }

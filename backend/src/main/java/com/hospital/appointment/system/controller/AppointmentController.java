@@ -34,9 +34,9 @@ public class AppointmentController {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    // ========================================================================= 
-    // 📊 ADMIN DASHBOARD: QUEUE MANAGEMENT ENDPOINTS 
-    // ========================================================================= 
+     
+    //Admin Dashboard: Doctor Queue Management Endpoints
+     
 
     @GetMapping("/doctor-queue/{doctorId}") 
     public ResponseEntity<List<DoctorQueueResponse>> getDoctorTodayQueue(@PathVariable Long doctorId) { 
@@ -103,7 +103,7 @@ public class AppointmentController {
             nextAppointment.setUpdatedAt(LocalDateTime.now()); 
             appointmentRepository.save(nextAppointment); 
 
-            // 🎯 AUTOMATED QUEUE PROXIMITY HOOK: The "Next-but-One" Proximity check
+            //Automated Queue Proximity Notification Logic
             try {
                 List<Appointment> todayQueue = appointmentRepository.findAll().stream()
                     .filter(a -> a.getDoctorId().equals(nextAppointment.getDoctorId())
@@ -166,9 +166,9 @@ public class AppointmentController {
         return ResponseEntity.notFound().build(); 
     } 
 
-    // ========================================================================= 
-    // 🩺 PATIENT PORTAL: BOOKING & APPOINTMENT ENDPOINTS  
-    // ========================================================================= 
+    
+    //Patient-Facing Endpoints: Specializations, Doctors, Slots, and Appointment Management
+     
 
     @GetMapping("/specializations") 
     public ResponseEntity<List<String>> getAllSpecializations() { 
@@ -297,9 +297,8 @@ public class AppointmentController {
             
             Appointment savedAppt = appointmentRepository.save(appt); 
             
-            // =================================================================
-            // 🎯 DYNAMIC FIX: RESOLVE DOCTOR NAME FROM EXACT PHYSICAL DATABASE COLUMNS
-            // =================================================================
+            
+                 
             try {
                 patientRepository.findById(patientId).ifPresent(patient -> {
                     String patientFullName = patient.getFirstName() + " " + patient.getLastName();
@@ -313,7 +312,7 @@ public class AppointmentController {
                             doctorLabel = realDoctorName;
                         }
                     } catch (Exception dbEx) {
-                        // Fallback secondary structural option mapping the plain "name" column directly
+                        
                         try {
                             String sqlBackup = "SELECT name FROM doctors WHERE id = ?";
                             String backupName = jdbcTemplate.queryForObject(sqlBackup, String.class, docId);
@@ -370,7 +369,7 @@ public class AppointmentController {
                 } 
                 Appointment savedAppt = appointmentRepository.save(appointment); 
                 
-                // 🎯 AUTOMATED LIFECYCLE HOOK: Email + WhatsApp Reschedule Trigger
+                //Automated Lifecycle Hook: Email + WhatsApp Reschedule Trigger
                 try {
                     patientRepository.findById(appointment.getPatientId()).ifPresent(patient -> {
                         String patientFullName = patient.getFirstName() + " " + patient.getLastName();
@@ -428,8 +427,7 @@ public class AppointmentController {
                 appointment.setStatus(AppointmentStatus.CANCELLED); 
                 appointment.setUpdatedAt(LocalDateTime.now()); 
                 Appointment savedAppt = appointmentRepository.save(appointment); 
-                
-                // 🎯 AUTOMATED LIFECYCLE HOOK: Email + WhatsApp Cancellation Trigger
+                // Automated Lifecycle Hook: Email + WhatsApp Cancellation Trigger
                 try {
                     patientRepository.findById(appointment.getPatientId()).ifPresent(patient -> {
                         String patientFullName = patient.getFirstName() + " " + patient.getLastName();

@@ -60,8 +60,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
             "WHERE a.patient_id = :patientId ORDER BY a.appointment_date DESC, a.time_slot DESC", nativeQuery = true)
     List<Object[]> findAppointmentsWithDoctorDetails(@Param("patientId") Long patientId);
 
-    // 🎯 FIXED: Dynamically pulls real first and last names from the patients table profile rows.
-    // Falls back gracefully to a.patient_name if the user hasn't created a patient profile record.
     @Query(value = "SELECT a.id, a.token_number, " +
             "COALESCE(NULLIF(TRIM(CONCAT(p.first_name, ' ', p.last_name)), ''), a.patient_name) AS patient_name, " +
             "a.appointment_date, a.time_slot, a.status, a.medical_problem, " +

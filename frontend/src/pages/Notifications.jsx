@@ -9,4 +9,4 @@ const Notifications = () => {
   );
 };
 
-export default Notifications; // 👈 MAKE SURE THIS IS HERE
+export default Notifications;
