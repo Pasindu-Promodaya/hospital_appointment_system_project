@@ -143,27 +143,26 @@ export default function BookAppointment({ patientId }) {
     setSubmitLoading(true);
     setUiMessage({ type: '', text: '' });
 
-   
     let activeId = patientId || user?.patientId || user?.linkedPatientId;
+    let activeEmail = user?.email || ""; 
     
-    if (!activeId) {
-      try {
-        const storedSession = localStorage.getItem("userSession");
-        const flatAuthUser = localStorage.getItem("authUser");
-        
-        if (storedSession) {
-          const session = JSON.parse(storedSession);
-          activeId = session.patientId || session.linkedPatientId;
-        } else if (flatAuthUser) {
-          const authUserObj = JSON.parse(flatAuthUser);
-          activeId = authUserObj.patientId || authUserObj.linkedPatientId;
-        }
-      } catch (err) {
-        console.error("Session profile parsing lookup error:", err);
+    // Fallback block to scrape storage strings if variables are running asynchronous handshakes
+    try {
+      const storedSession = localStorage.getItem("userSession");
+      const flatAuthUser = localStorage.getItem("authUser");
+      
+      if (storedSession) {
+        const session = JSON.parse(storedSession);
+        if (!activeId) activeId = session.patientId || session.linkedPatientId;
+        if (!activeEmail) activeEmail = session.email;
+      } else if (flatAuthUser) {
+        const authUserObj = JSON.parse(flatAuthUser);
+        if (!activeId) activeId = authUserObj.patientId || authUserObj.linkedPatientId;
+        if (!activeEmail) activeEmail = authUserObj.email;
       }
+    } catch (err) {
+      console.error("Session profile parsing lookup error:", err);
     }
-
-     
     
     if (!activeId) {
       setUiMessage({ 
@@ -176,8 +175,11 @@ export default function BookAppointment({ patientId }) {
 
     const formattedTime = selectedTimeSlot.length === 5 ? `${selectedTimeSlot}:00` : selectedTimeSlot;
     
+    //: Included patientEmail to feed your secondary backend logic cleanly!
     const payload = {
       doctorId: parseInt(selectedDoctorId),
+      patientId: parseInt(activeId),
+      patientEmail: activeEmail || null, 
       appointmentDate: selectedDate,
       appointmentTime: formattedTime, 
       medicalProblem: medicalProblem.trim() || null

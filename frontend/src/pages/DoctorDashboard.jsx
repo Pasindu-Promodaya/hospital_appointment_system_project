@@ -216,9 +216,9 @@ export default function DoctorDashboard() {
       });
 
       if (response.ok) {
-        alert(`🎯 Roster published successfully for ${dayOfWeek}!`);
+        alert(` Roster published successfully for ${dayOfWeek}!`);
       } else {
-        alert('⚠️ Configuration rejected. Check backend terminal for parsing limits.');
+        alert('Configuration rejected. Check backend terminal for parsing limits.');
       }
     } catch (error) {
       console.error('Handshake error:', error);
@@ -357,7 +357,7 @@ export default function DoctorDashboard() {
                     {getToken(serving)}
                   </div>
                   <div className="text-base font-semibold mt-1">
-                    {serving.patientName || 'Registered Patient'}
+                    {serving.patientName || serving.patient_name || 'Registered Patient'}
                   </div>
                   <div className="text-xs text-slate-400 mt-0.5">
                     ⏱️ Time: {getTime(serving)} &middot; Symptoms: {serving.medicalProblem || 'General Consultation'}
@@ -413,9 +413,8 @@ export default function DoctorDashboard() {
                       {getToken(patient)}
                     </span>
                     <div className="flex-1">
-                      {/* 🎯 FIXED: Replaced fallback indicators to explicitly load the patientName text value */}
                       <span className="block text-sm font-semibold text-slate-800">
-                        {patient.patientName || 'Unknown Patient'}
+                        {patient.patientName || patient.patient_name || 'Unknown Patient'}
                       </span>
                       <span className="block text-xs text-slate-400 mt-0.5">
                         🕒 {getTime(patient)}
@@ -435,11 +434,11 @@ export default function DoctorDashboard() {
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-3 border-b border-slate-100 pb-3.5">
                 <div className="w-11 h-11 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm">
-                  {initials(selectedPatient.patientName)}
+                  {initials(selectedPatient.patientName || selectedPatient.patient_name)}
                 </div>
                 <div>
                   <div className="text-sm font-bold text-slate-800">
-                    {selectedPatient.patientName || 'Unknown Patient'}
+                    {selectedPatient.patientName || selectedPatient.patient_name || 'Registered Patient'}
                   </div>
                   <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded mt-1 ${(STATUS_STYLING[getStatus(selectedPatient)] || STATUS_STYLING.PENDING).bg} ${(STATUS_STYLING[getStatus(selectedPatient)] || STATUS_STYLING.PENDING).color}`}>
                     {(STATUS_STYLING[getStatus(selectedPatient)] || STATUS_STYLING.PENDING).label}
@@ -449,8 +448,8 @@ export default function DoctorDashboard() {
               <div className="flex flex-col gap-2.5 text-xs">
                 <div className="flex justify-between border-b border-slate-50 pb-1.5"><span className="text-slate-400">Roster Ticket:</span><strong className="font-mono text-slate-700">{getToken(selectedPatient)}</strong></div>
                 <div className="flex justify-between border-b border-slate-50 pb-1.5"><span className="text-slate-400">Time Allocation:</span><span className="text-slate-700 font-medium">{getTime(selectedPatient)}</span></div>
-                <div className="flex justify-between border-b border-slate-50 pb-1.5"><span className="text-slate-400">Contact Number:</span><span className="text-sky-600 font-medium">{selectedPatient.patientPhone || 'Not Provided'}</span></div>
-                <div className="flex justify-between pb-1"><span className="text-slate-400">Email Address:</span><span className="text-sky-600 font-medium">{selectedPatient.patientEmail || 'Not Provided'}</span></div>
+                <div className="flex justify-between border-b border-slate-50 pb-1.5"><span className="text-slate-400">Contact Number:</span><span className="text-sky-600 font-medium">{selectedPatient.phone || selectedPatient.patientPhone || 'Not Provided'}</span></div>
+                <div className="flex justify-between pb-1"><span className="text-slate-400">Email Address:</span><span className="text-sky-600 font-medium">{selectedPatient.email || selectedPatient.patientEmail || 'Not Provided'}</span></div>
               </div>
               <div className="border-t border-slate-100 pt-3.5 mt-1">
                 <span className="block text-[11px] font-bold text-slate-400 uppercase mb-1.5">Primary Symptoms</span>

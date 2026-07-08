@@ -23,7 +23,7 @@ public class NotificationTestController {
         String mockPatientName = requestBodyPayload.get("patientName") != null ? (String) requestBodyPayload.get("patientName") : "Test Patient";
         String mockDoctorName = requestBodyPayload.get("doctorName") != null ? (String) requestBodyPayload.get("doctorName") : "Dr. Medical Specialist";
 
-        // 🎯 FIXED: Passed all 11 required arguments to completely satisfy the updated service signature
+        //  Passed all 11 required arguments to completely satisfy the updated service signature
         notificationService.processAppointmentLifecycleChange(
             (Integer) requestBodyPayload.get("appointmentId"),
             (Integer) requestBodyPayload.get("patientId"),
