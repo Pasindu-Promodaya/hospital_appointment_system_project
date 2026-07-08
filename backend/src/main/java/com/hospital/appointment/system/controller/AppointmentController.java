@@ -45,7 +45,19 @@ public class AppointmentController {
         List<DoctorQueueResponse> response = rawQueue.stream().map(row -> { 
             Long id = ((Number) row[0]).longValue(); 
             int tokenNumber = row[1] != null ? ((Number) row[1]).intValue() : 0; 
-            String patientName = String.valueOf(row[2]); 
+
+            // Fallback values from the appointment row
+            final String[] finalPatientName = { String.valueOf(row[2]) }; 
+            final String[] finalPhone = { row[7] != null ? row[7].toString() : "Not Provided" };
+            final String[] finalEmail = { row[8] != null ? row[8].toString() : "Not Provided" };
+
+            appointmentRepository.findById(id).ifPresent(appt -> {
+                patientRepository.findById(appt.getPatientId()).ifPresent(patient -> {
+                    finalPatientName[0] = patient.getFirstName() + " " + patient.getLastName();
+                    finalPhone[0] = patient.getPhone() != null ? patient.getPhone() : "Not Provided";
+                    finalEmail[0] = patient.getEmail() != null ? patient.getEmail() : "Not Provided";
+                });
+            });
 
             LocalDate apptDate = LocalDate.now(); 
             if (row[3] != null) { 
@@ -61,11 +73,18 @@ public class AppointmentController {
                 default -> rawStatus; 
             }; 
 
+            String medicalProblem = row[6] != null ? row[6].toString() : "";
+
             return new DoctorQueueResponse( 
-                    id, tokenNumber, patientName, apptDate, timeSlotStr, status, 
-                    row[6] != null ? row[6].toString() : "", 
-                    row[7] != null ? row[7].toString() : "", 
-                    row[8] != null ? row[8].toString() : "" 
+                    id, 
+                    tokenNumber, 
+                    finalPatientName[0], 
+                    apptDate, 
+                    timeSlotStr, 
+                    status, 
+                    medicalProblem, 
+                    finalPhone[0], 
+                    finalEmail[0] 
             ); 
         }).toList(); 
 
@@ -112,15 +131,7 @@ public class AppointmentController {
                     .toList();
 
                 for (Appointment appt : todayQueue) {
-                    patientRepository.findById(appt.getPatientId()).ifPresent(patient -> {
-                        notificationService.monitorQueueProximityAndNotify(
-                            currentServingToken,            
-                            appt.getTokenNumber(),          
-                            patient.getPhone(),             
-                            appt.getId().intValue(), 
-                            appt.getPatientId().intValue()
-                        );
-                    });
+                    默默(appt);
                 }
             } catch (Exception qEx) {
                 System.err.println("Queue Proximity Analyzer Failure: " + qEx.getMessage());
@@ -129,6 +140,18 @@ public class AppointmentController {
             return ResponseEntity.ok().build(); 
         } 
         return ResponseEntity.notFound().build(); 
+    }
+
+    private void 默默(Appointment appt) {
+        patientRepository.findById(appt.getPatientId()).ifPresent(patient -> {
+            notificationService.monitorQueueProximityAndNotify(
+                appt.getTokenNumber(),            
+                appt.getTokenNumber(),          
+                patient.getPhone(),             
+                appt.getId().intValue(), 
+                appt.getPatientId().intValue()
+            );
+        });
     } 
 
     @PutMapping("/{id}/complete") 
@@ -303,7 +326,6 @@ public class AppointmentController {
                 patientRepository.findById(patientId).ifPresent(patient -> {
                     String patientFullName = patient.getFirstName() + " " + patient.getLastName();
                     
-                    // Pulling directly from physical table definitions matching `@Column(name = "first_name")`
                     String doctorLabel = "Dr. Medical Specialist"; 
                     try {
                         String sql = "SELECT CONCAT('Dr. ', first_name, ' ', last_name) FROM doctors WHERE id = ?";
@@ -324,6 +346,7 @@ public class AppointmentController {
                         }
                     }
 
+                    
                     notificationService.processAppointmentLifecycleChange(
                         savedAppt.getId().intValue(),       
                         patientId.intValue(),               
@@ -389,6 +412,7 @@ public class AppointmentController {
                             } catch (Exception e2) {}
                         }
 
+                        
                         notificationService.processAppointmentLifecycleChange(
                             savedAppt.getId().intValue(),
                             appointment.getPatientId().intValue(),
@@ -447,6 +471,7 @@ public class AppointmentController {
                             } catch (Exception e2) {}
                         }
 
+                        
                         notificationService.processAppointmentLifecycleChange(
                             savedAppt.getId().intValue(),
                             appointment.getPatientId().intValue(),

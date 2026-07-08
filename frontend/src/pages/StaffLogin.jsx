@@ -64,7 +64,7 @@ export default function Login() {
       }
     } catch (err) {
       console.error('Handshake routing exception:', err);
-      setError('❌ Connection refused: Unable to reach the Spring Boot server.');
+      setError(' Connection refused: Unable to reach the Spring Boot server.');
     } finally {
       setLoading(false);
     }

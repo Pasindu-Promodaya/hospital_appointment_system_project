@@ -7,6 +7,7 @@ const PatientDashboard = () => {
   const { user, login } = useAuth(); 
   const [userId, setUserId] = useState(null);
   const [patientId, setPatientId] = useState(null); 
+  const [patient, setPatient] = useState(null); 
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const navigate = useNavigate();
@@ -36,7 +37,6 @@ const PatientDashboard = () => {
       if (storedSession) {
         try {
           const parsed = JSON.parse(storedSession);
-          
           
           activeUserId = parsed.userId || (parsed.role && parsed.role !== "ROLE_PATIENT" ? parsed.id : null);
           activePatientId = parsed.patientId || (parsed.id === 17 ? 17 : parsed.id); 
@@ -74,13 +74,13 @@ const PatientDashboard = () => {
     setLoading(false);
   }, [user]);
 
-  //  Fetch profile row records using explicit path matching rules
+  // Fetch profile row records using explicit path matching rules
   useEffect(() => {
     if (!patientId) return;
 
     const fetchPatientData = async () => {
       try {
-        //  Directs request to use the explicit Profile locator path parameter
+        // Directs request to use the explicit Profile locator path parameter
         const { data } = await axios.get(`http://localhost:8080/api/patients/profile/${patientId}`);
         
         if (data) {
@@ -110,7 +110,7 @@ const PatientDashboard = () => {
     };
 
     fetchPatientData();
-  }, [patientId]); 
+  }, [patientId, userId]); 
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -127,16 +127,15 @@ const PatientDashboard = () => {
       lastName: formData.lastName,
       gender: formData.gender,
       email: formData.email,
-      phone: formData.telephoneNumber, // Maps back cleanly to your phone field
+      phone: formData.telephoneNumber, 
       dateOfBirth: formData.dateOfBirth,
-      bloodType: formData.bloodType,     // Sends your newly selected blood drop box group value
+      bloodType: formData.bloodType,     
       knownDrugAllergies: formData.knownDrugAllergies,
       chronicConditions: formData.chronicConditions,
       emergencyContactDetails: formData.emergencyContactDetails
     };
 
     try {
-      
       const { data } = await axios.put(`http://localhost:8080/api/patients/${patientId}`, payload);
       setPatient(data);
       

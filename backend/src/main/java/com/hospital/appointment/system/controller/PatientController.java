@@ -23,7 +23,7 @@ public class PatientController {
     @Autowired
     private PatientRepository patientRepository;
 
-    // 🎯 PATH 1: Fetch directly using the true PATIENT ID (e.g., /api/patients/profile/17)
+    
     @GetMapping("/profile/{patientId}")
     public ResponseEntity<?> getPatientByPatientId(@PathVariable Long patientId) {
         Optional<Patient> patientOpt = patientRepository.findById(patientId);
@@ -43,13 +43,13 @@ public class PatientController {
                 return ResponseEntity.ok(patient);
             }
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("❌ Database Record Missing: No profile found matching user ID " + userId);
+                    .body(" Database Record Missing: No profile found matching user ID " + userId);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 
-    // 🛠️ PATH 3: Map-driven fallback update processor now targeting PATIENT ID
+    //  Map-driven fallback update processor now targeting PATIENT ID
     @PutMapping("/{patientId}") 
     public ResponseEntity<?> updateProfile(@PathVariable Long patientId, @RequestBody Map<String, Object> payload) {
         try {
@@ -83,7 +83,7 @@ public class PatientController {
                 existingPatient.setDateOfBirth(LocalDate.parse((String) payload.get("dateOfBirth")));
             }
 
-            // 🎯 GENDER HANDLING: Normalize input strings
+            //  Normalize input strings
             if (payload.containsKey("gender") && payload.get("gender") != null) {
                 String rawGender = ((String) payload.get("gender")).trim();
                 if (!rawGender.isEmpty()) {

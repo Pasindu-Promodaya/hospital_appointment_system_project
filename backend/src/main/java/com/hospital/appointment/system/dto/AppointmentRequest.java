@@ -22,7 +22,7 @@ public class AppointmentRequest {
     public LocalTime getTimeSlot() { return timeSlot; }
     public void setTimeSlot(LocalTime timeSlot) { this.timeSlot = timeSlot; }
 
-    // 🎯 THE INTEGRATION BRIDGE: Setter alias so Jackson can bind 'appointmentTime' payloads perfectly
+    //INTEGRATION BRIDGE: Setter alias so Jackson can bind 'appointmentTime' payloads perfectly
     public void setAppointmentTime(LocalTime appointmentTime) { 
         this.timeSlot = appointmentTime; 
     }

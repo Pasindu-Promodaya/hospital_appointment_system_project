@@ -41,7 +41,7 @@ public class NotificationService {
         Twilio.init(twilioSid, twilioAuthToken);
     }
 
-    // 📧 EMAIL CHANNEL DISPATCH ROUTER (Rich HTML Layout Engine)
+    // EMAIL CHANNEL DISPATCH ROUTER (Rich HTML Layout Engine)
     public void sendEmailAlert(String toEmail, String subject, String htmlBody, Integer appointmentId, Integer patientId, NotificationType type) {
         Notification auditEntry = new Notification();
         auditEntry.setAppointmentId(appointmentId);
@@ -67,7 +67,7 @@ public class NotificationService {
         notificationRepository.save(auditEntry);
     }
 
-    // 💬 WHATSAPP CHANNEL DISPATCH ROUTER
+    //WHATSAPP CHANNEL DISPATCH ROUTER
     public void sendWhatsAppAlert(String toPhone, String textBody, Integer appointmentId, Integer patientId, NotificationType type) {
         Notification auditEntry = new Notification();
         auditEntry.setAppointmentId(appointmentId);
@@ -76,8 +76,20 @@ public class NotificationService {
         auditEntry.setMessage(textBody);
 
         try {
+            // : Automatically format incoming local number strings to standard international E.164 formatting rules
+            String cleanPhone = toPhone.trim().replaceAll("\\s+", "");
+            
+            if (!cleanPhone.startsWith("+")) {
+                if (cleanPhone.startsWith("0")) {
+                    // Strips the leading zero and maps Sri Lanka's prefix code (+94)
+                    cleanPhone = "+94" + cleanPhone.substring(1);
+                } else {
+                    cleanPhone = "+94" + cleanPhone;
+                }
+            }
+
             String senderFormatted = "whatsapp:" + twilioWhatsAppNumber;
-            String recipientFormatted = "whatsapp:" + toPhone;
+            String recipientFormatted = "whatsapp:" + cleanPhone;
 
             Message.creator(
                 new PhoneNumber(recipientFormatted),
@@ -86,7 +98,10 @@ public class NotificationService {
             ).create();
             
             auditEntry.setDeliveryStatus(DeliveryStatus.SENT);
+            System.out.println(" WhatsApp notification securely pushed out to device target node: " + recipientFormatted);
         } catch (Exception e) {
+            System.err.println(" CRITICAL TWILIO WHATSAPP FAILURE: " + e.getMessage());
+            e.printStackTrace();
             auditEntry.setDeliveryStatus(DeliveryStatus.FAILED);
         }
         notificationRepository.save(auditEntry);
@@ -125,7 +140,7 @@ public class NotificationService {
         sendEmailAlert(toEmail, "Hospital Staff Account Provisioned", htmlLayout, 0, 0, NotificationType.GENERAL_NOTICE);
     }
 
-    // 🔗 HOOK 1: Fully Configured with Patient Name, Doctor Name, Tokens, Dates, and Times
+    //  Fully Configured with Patient Name, Doctor Name, Tokens, Dates, and Times
     public void processAppointmentLifecycleChange(
             Integer appointmentId, Integer patientId, String email, String phone, 
             String actionStatus, String date, String time, 
@@ -155,7 +170,7 @@ public class NotificationService {
             + "        <div style='padding: 10px 0; border-bottom: 1px solid #e2e8f0; min-height: 20px;'><span style='font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;'>Scheduled Date</span><span style='float: right; font-size: 14px; font-weight: 700; color: #334155;'>" + date + "</span></div>"
             + "        <div style='padding: 10px 0; min-height: 20px;'><span style='font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;'>Allocated Time Slot</span><span style='float: right; font-size: 14px; font-weight: 700; color: #334155;'>" + time + "</span></div>"
             + "      </div>"
-            + "      <div style='margin-top: 24px; text-align: center; font-size: 0;'>"
+            + "      <div style='grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 24px; text-align: center; font-size: 0;'>"
             + "        <div style='display: inline-block; padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: 700; background-color: #eff6ff; border: 1px solid #dbeafe; color: #1d4ed8; margin: 0 6px; text-transform: uppercase; letter-spacing: 0.1em;'>Token #" + tokenNumber + "</div>"
             + "        <div style='display: inline-block; padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: 700; background-color: #faf5ff; border: 1px solid #f3e8ff; color: #6b21a8; margin: 0 6px; text-transform: uppercase; letter-spacing: 0.1em;'>Queue Order #" + queueOrder + "</div>"
             + "      </div>"
@@ -165,15 +180,15 @@ public class NotificationService {
             + "</div>"
             + "</body></html>";
 
-        String twilioPlainNotice = "Hospital Notice for " + patientName + ": Your appointment with " + doctorName 
-            + " is [" + actionStatus + "] for Date: " + date + " at Time: " + time 
-            + ". Token: #" + tokenNumber + ", Queue: #" + queueOrder + ".";
+        //  Adheres strictly to standard pre-approved Twilio developer trial message layouts to secure clean delivery
+        String twilioPlainNotice = "Your appointment reminder on " + date + " at " + time + " with " + doctorName 
+            + ". Your token number is #" + tokenNumber + ". Status: " + actionStatus.toUpperCase();
 
         sendEmailAlert(email, "Hospital Update - Booking " + actionStatus, htmlLayout, appointmentId, patientId, type);
         sendWhatsAppAlert(phone, twilioPlainNotice, appointmentId, patientId, type);
     }
 
-    // 🔗 HOOK 2: Live queue sequencer loops (The Next-but-One rule)
+    //  Live queue sequencer loops (The Next-but-One rule)
     public void monitorQueueProximityAndNotify(int currentServingToken, int patientTargetToken, String phone, Integer appointmentId, Integer patientId) {
         int linearPositionGap = patientTargetToken - currentServingToken;
 
@@ -186,7 +201,7 @@ public class NotificationService {
         }
     }
 
-    // 🔗 REUSABLE INTER-COMPONENT HOOK: General Notices
+    //  REUSABLE INTER-COMPONENT HOOK: General Notices
     public void triggerGeneralHospitalNotice(Integer patientId, String targetEmail, String specificSubject, String informationNotice) {
         sendEmailAlert(targetEmail, specificSubject, informationNotice, 0, patientId, NotificationType.GENERAL_NOTICE);
     }
