@@ -44,9 +44,6 @@ public class Doctor {
     @Column(name = "specialization", nullable = false)
     private String specialization;
 
-    @Column(name = "specialty", nullable = false)
-    private String specialty;
-
     @Column(name = "license_number", unique = true, nullable = false)
     private String licenseNumber;
 
@@ -70,7 +67,7 @@ public class Doctor {
 
     // Constructor for creating a doctor profile manually
     public Doctor(User user, String firstName, String lastName, String email, String telephoneNumber,
-                  String specialization, String specialty, String licenseNumber, Boolean activeStatus, Long createdByAdminId) {
+                  String specialization, String licenseNumber, Boolean activeStatus, Long createdByAdminId) {
         this.user = user;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -78,7 +75,6 @@ public class Doctor {
         this.email = email;
         this.telephoneNumber = telephoneNumber;
         this.specialization = specialization;
-        this.specialty = specialty;
         this.licenseNumber = licenseNumber;
         this.activeStatus = activeStatus;
         this.createdByAdminId = createdByAdminId;

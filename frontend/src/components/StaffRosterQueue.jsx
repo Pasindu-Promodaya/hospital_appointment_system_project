@@ -55,7 +55,7 @@ export default function StaffRosterQueue() {
         return () => clearInterval(interval);
     }, [doctorId]);
 
-    // 🎨 UI Styling Objects (Plain CSS equivalent to match CareFlow Pro)
+    
     const containerStyle = {
         backgroundColor: 'white',
         padding: '24px',
@@ -158,7 +158,7 @@ export default function StaffRosterQueue() {
                     disabled={loading || queueData.totalWaiting === 0}
                     style={buttonStyle}
                 >
-                    {loading ? 'Calling...' : 'Call Next Patient ➡️'}
+                    {loading ? 'Calling...' : 'Call Next Patient '}
                 </button>
             </div>
         </div>

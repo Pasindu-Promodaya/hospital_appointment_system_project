@@ -101,6 +101,7 @@ public class AuthController {
         patient.setEmail(request.getEmail());
         patient.setDateOfBirth(LocalDate.parse(request.getDateOfBirth()));
         patient.setPhone(request.getPhone());
+        patient.setGender(request.getGender()); 
 
         patientRepository.save(patient);
 
@@ -162,7 +163,23 @@ public class AuthController {
 
         String realJwtToken = jwtTokenProvider.generateToken(user.getEmail(), roleStr);
 
-        AuthResponse response = new AuthResponse(realJwtToken, user.getEmail(), roleStr, user.getId(), null);
+        Long resolvedPatientProfileId = null;
+        Optional<Patient> patientOptional = patientRepository.findAll().stream()
+                .filter(p -> p.getUserId() != null && p.getUserId().equals(user.getId()))
+                .findFirst();
+
+        if (patientOptional.isPresent()) {
+            resolvedPatientProfileId = patientOptional.get().getId();
+        }
+
+                AuthResponse response = new AuthResponse(
+                realJwtToken, 
+                user.getEmail(), 
+                roleStr, 
+                user.getId(), 
+                resolvedPatientProfileId
+        );
+        
         return ResponseEntity.ok(response);
     }
 }

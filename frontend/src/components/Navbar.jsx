@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const NavBar = () => {
+const Navbar = () => {
     const { user, logout } = useAuth();
 
     // Safely extract role parameters from global state or browser session caching objects
@@ -22,16 +22,16 @@ const NavBar = () => {
     const userRole = getActiveRole();
     const sanitizedRole = String(userRole || '').trim().toUpperCase();
 
+    
     const allMenuItems = [
         { path: '/doctor-dashboard', label: '👨‍⚕️ Doctor Portal', role: 'ROLE_DOCTOR', borderClass: 'hover:border-sky-600 active:border-sky-600', activeColor: '#0284c7' },
         { path: '/doctors', label: '⚕️ Doctors Directory', role: 'PUBLIC', borderClass: 'hover:border-sky-400 active:border-sky-400', activeColor: '#38bdf8' },
         { path: '/book-appointment', label: '📅 Book Appointments', role: 'ROLE_PATIENT', borderClass: 'hover:border-green-400 active:border-green-400', activeColor: '#4ade80' },
         { path: '/patient-dashboard', label: '🩺 Patient Portal', role: 'ROLE_PATIENT', borderClass: 'hover:border-pink-400 active:border-pink-400', activeColor: '#f472b6' },
-        { path: '/admin', label: '📊 Staff Roster', role: 'ROLE_ADMIN', borderClass: 'hover:border-amber-400 active:border-amber-400', activeColor: '#fbbf24' },
-        { path: '/notifications', label: '🔔 Channel Alerts', role: 'ROLE_PATIENT_ALERTS', borderClass: 'hover:border-violet-400 active:border-violet-400', activeColor: '#a78bfa' }
+        { path: '/admin', label: '📊 Staff Roster', role: 'ROLE_ADMIN', borderClass: 'hover:border-amber-400 active:border-amber-400', activeColor: '#fbbf24' }
     ];
 
-    // 🌟 DYNAMIC FILTER ENGINE: Rules-based visibility matrix
+    //  Rules-based visibility matrix
     const visibleMenuItems = allMenuItems.filter(item => {
         // Rule 1: If no active user session exists, show ONLY public items
         if (!userRole || sanitizedRole === 'NULL' || sanitizedRole === '') {
@@ -50,7 +50,7 @@ const NavBar = () => {
 
         // Scenario C: Authenticated Patient Context -> Display Patient items + Public directory
         if (sanitizedRole === 'ROLE_PATIENT' || sanitizedRole === 'PATIENT') {
-            return item.role === 'ROLE_PATIENT' || item.role === 'ROLE_PATIENT_ALERTS' || item.role === 'PUBLIC';
+            return item.role === 'ROLE_PATIENT' || item.role === 'PUBLIC';
         }
 
         return false;
@@ -61,11 +61,11 @@ const NavBar = () => {
             {/* Upper Utility segment */}
             <div className="flex justify-between items-center px-10 py-2 border-b border-slate-100 text-xs text-slate-500 bg-slate-50">
                 <div className="flex gap-6 font-semibold">
-          <span className="text-blue-600 border-b-2 border-blue-600 pb-2">
-            {userRole && sanitizedRole !== 'NULL' && sanitizedRole !== ''
-                ? `${sanitizedRole.replace('ROLE_', '')} Workspace`
-                : 'Public Gateway'}
-          </span>
+                    <span className="text-blue-600 border-b-2 border-blue-600 pb-2">
+                        {userRole && sanitizedRole !== 'NULL' && sanitizedRole !== ''
+                            ? `${sanitizedRole.replace('ROLE_', '')} Workspace`
+                            : 'Public Gateway'}
+                    </span>
                 </div>
 
                 {/* Top-Right Controls Container */}
@@ -129,7 +129,7 @@ const NavBar = () => {
 
                 <div>
                     <button className="bg-blue-600 hover:bg-blue-700 text-white border-none px-5 py-2.5 rounded-md font-bold text-xs cursor-pointer transition-colors duration-150">
-                        EMERGENCY LINE
+                        Call Support - 1990
                     </button>
                 </div>
             </div>
@@ -137,4 +137,4 @@ const NavBar = () => {
     );
 };
 
-export default NavBar;
+export default Navbar;

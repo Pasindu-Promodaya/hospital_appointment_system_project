@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom"; // 🎯 Catch router state memory
+import { useNavigate, useLocation } from "react-router-dom"; 
 import axios from "axios";
 import { useAuth } from "./context/AuthContext";
 
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation(); // 🎯 Initialize location reader
+  const location = useLocation(); 
 
   // State configurations
   const [email, setEmail] = useState("");
@@ -20,7 +20,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // 🎯 Pointed directly to your isolated split patient login endpoint routing
+      // Pointed directly to your isolated split patient login endpoint routing
       const response = await axios.post("http://localhost:8080/api/auth/login/patient", {
         email: email,
         password: password,
@@ -29,12 +29,17 @@ const Login = () => {
       const data = response.data;
 
       if (response.status === 200) {
+        
+        const rawRole = data.role || 'ROLE_PATIENT';
+        const normalizedRole = rawRole.toUpperCase().trim() === 'PATIENT' ? 'ROLE_PATIENT' : rawRole;
+
         const sessionPayload = {
           token: data.token,
           email: data.email,
-          role: data.role || 'ROLE_PATIENT',
-          id: data.id || null, // Holds user.getId() from your updated AuthResponse DTO
-          userId: data.id || null // Double structural backup alignment
+          role: normalizedRole,        
+          id: data.id || null,         
+          userId: data.id || null,     
+          patientId: data.patientId || null 
         };
 
         // Safely map verification tokens into your dynamic global context layer
@@ -43,27 +48,24 @@ const Login = () => {
         // Explicitly persist payload properties so the Dashboard reads it perfectly on mount
         localStorage.setItem("userSession", JSON.stringify(sessionPayload));
 
-        // 🎯 Check if they arrived via a public booking redirect route
+        // Check if they arrived via a public booking redirect route
         if (location.state?.fromBooking && location.state?.doctor) {
-          // 🎯 FIXED: Reroute them to the correct active path parameter matching your App router tree exactly
           const targetPath = location.state.redirectTo || "/appointments";
           
           navigate(targetPath, { 
             state: { doctor: location.state.doctor } 
           });
         } else {
-          // 🎯 FIXED: Updated normal landing dashboard path route destination name pattern
           navigate("/patient-dashboard");
         }
       }
     } catch (err) {
       console.error("Login System Error:", err);
 
-      // Safe processing of backend error objects (including our strict 403 blocks) into readable text strings
       const backendErrorMessage =
         err.response?.data?.message ||
         err.response?.data ||
-        "Authentication node unreachable. Please verify Spring Boot is running on port 8080.";
+        "Authentication node unreachable. Please verify Spring Boot is running on port 8080 and credentials are correct.";
 
       setError(String(backendErrorMessage));
     } finally {

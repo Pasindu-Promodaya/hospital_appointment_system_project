@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom'; 
+import { useAuth } from '../context/AuthContext'; 
 
 export default function BookAppointment({ patientId }) {
+  const { user } = useAuth(); 
   const API_BASE_URL = 'http://localhost:8080/api';
   const location = useLocation(); 
 
-  // Extract variables from router redirect memory state fields
   const redirectedDoctor = location.state?.doctor || null;
   const initialDoctorId = redirectedDoctor?.id || '';
   const initialSpecialization = redirectedDoctor?.specialization || '';
@@ -26,11 +27,8 @@ export default function BookAppointment({ patientId }) {
   const [submitLoading, setSubmitLoading] = useState(false);
   
   const [uiMessage, setUiMessage] = useState({ type: '', text: '' });
-  
-  // 🎯 NEW: State to control the confirmation popup
   const [confirmationData, setConfirmationData] = useState(null);
 
-  // Load the initial list of specializations when the component mounts.
   useEffect(() => {
     setLoadingSpecializations(true);
     fetch(`${API_BASE_URL}/appointments/specializations`)
@@ -47,12 +45,11 @@ export default function BookAppointment({ patientId }) {
       })
       .catch(() => {
         setSpecializations([]);
-        setUiMessage({ type: 'error', text: 'The appointment service is temporarily unavailable. Please verify backend connectivity and try again.' });
+        setUiMessage({ type: 'error', text: 'The appointment service is temporarily unavailable.' });
       })
       .finally(() => setLoadingSpecializations(false));
   }, []);
 
-  // Hydrate form options cleanly if redirected from directory with doctor info
   useEffect(() => {
     if (initialSpecialization) {
       setSelectedSpecialization(initialSpecialization);
@@ -68,12 +65,11 @@ export default function BookAppointment({ patientId }) {
         .then(data => {
           const doctorList = Array.isArray(data) ? data : [];
           setDoctors(doctorList);
-          
           if (initialDoctorId && doctorList.some(doc => String(doc.id) === String(initialDoctorId))) {
             setSelectedDoctorId(String(initialDoctorId));
           }
         })
-        .catch(() => console.error("Could not fetch secondary doctor parameters."))
+        .catch(() => console.error("Could not fetch doctor parameters."))
         .finally(() => setLoadingDoctors(false));
     }
   }, [initialSpecialization, initialDoctorId]);
@@ -91,19 +87,13 @@ export default function BookAppointment({ patientId }) {
       setLoadingDoctors(true);
       fetch(`${API_BASE_URL}/appointments/doctors?specialization=${encodeURIComponent(spec)}`)
         .then(async res => {
-          if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(errorText || 'Unable to fetch doctors.');
-          }
+          if (!res.ok) throw new Error('Unable to fetch doctors.');
           return res.json();
         })
         .then(data => {
           setDoctors(Array.isArray(data) ? data : []);
-          if (Array.isArray(data) && data.length === 0) {
-            setUiMessage({ type: 'info', text: 'No active medical personnel found registered under this specialization.' });
-          }
         })
-        .catch(() => setUiMessage({ type: 'error', text: 'Unable to load doctors for this specialty at the moment.' }))
+        .catch(() => setUiMessage({ type: 'error', text: 'Unable to load doctors.' }))
         .finally(() => setLoadingDoctors(false));
     }
   };
@@ -127,19 +117,13 @@ export default function BookAppointment({ patientId }) {
       
       fetch(`${API_BASE_URL}/appointments/available-slots?doctorId=${selectedDoctorId}&date=${date}`)
         .then(async res => {
-          if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(errorText || 'Unable to fetch available slots.');
-          }
+          if (!res.ok) throw new Error('Unable to fetch slots.');
           return res.json();
         })
         .then(slots => {
           setAvailableSlots(Array.isArray(slots) ? slots : []);
-          if (Array.isArray(slots) && slots.length === 0) {
-            setUiMessage({ type: 'warning', text: 'This doctor has no available scheduling slots left on the selected date.' });
-          }
         })
-        .catch(() => setUiMessage({ type: 'error', text: 'Unable to refresh available appointment slots right now.' }))
+        .catch(() => setUiMessage({ type: 'error', text: 'Unable to load available windows.' }))
         .finally(() => setLoadingSlots(false));
     }
   };
@@ -159,14 +143,35 @@ export default function BookAppointment({ patientId }) {
     setSubmitLoading(true);
     setUiMessage({ type: '', text: '' });
 
-    let activeId = patientId;
+   
+    let activeId = patientId || user?.patientId || user?.linkedPatientId;
+    
     if (!activeId) {
       try {
-        const session = JSON.parse(localStorage.getItem("userSession") || "{}");
-        activeId = session.id || session.userId || 1; 
+        const storedSession = localStorage.getItem("userSession");
+        const flatAuthUser = localStorage.getItem("authUser");
+        
+        if (storedSession) {
+          const session = JSON.parse(storedSession);
+          activeId = session.patientId || session.linkedPatientId;
+        } else if (flatAuthUser) {
+          const authUserObj = JSON.parse(flatAuthUser);
+          activeId = authUserObj.patientId || authUserObj.linkedPatientId;
+        }
       } catch (err) {
-        activeId = 1;
+        console.error("Session profile parsing lookup error:", err);
       }
+    }
+
+     
+    
+    if (!activeId) {
+      setUiMessage({ 
+        type: 'error', 
+        text: 'Identity Conflict: Your current account session is missing a verified Patient Profile token. Please sign out and sign back in to refresh your workspace data.' 
+      });
+      setSubmitLoading(false);
+      return;
     }
 
     const formattedTime = selectedTimeSlot.length === 5 ? `${selectedTimeSlot}:00` : selectedTimeSlot;
@@ -191,18 +196,15 @@ export default function BookAppointment({ patientId }) {
       const responseData = await response.json().catch(() => ({}));
 
       if (response.ok) {
-        // 🎯 NEW: Grab the doctor's name for the popup
         const bookedDoctor = doctors.find(doc => String(doc.id) === String(selectedDoctorId));
         const docName = bookedDoctor ? (bookedDoctor.name || `${bookedDoctor.firstName} ${bookedDoctor.lastName}`) : `Doctor #${selectedDoctorId}`;
 
-        // 🎯 NEW: Trigger the popup with the booking details
         setConfirmationData({
           doctor: `Dr. ${docName}`,
           date: selectedDate,
           time: formattedTime
         });
 
-        // Reset the form
         setSelectedSpecialization('');
         setSelectedDoctorId('');
         setSelectedDate('');
@@ -211,10 +213,10 @@ export default function BookAppointment({ patientId }) {
         setAvailableSlots([]);
         setDoctors([]);
       } else {
-        setUiMessage({ type: 'error', text: responseData.message || 'The booking request was rejected by the service. Please review your selection.' });
+        setUiMessage({ type: 'error', text: responseData.message || 'The booking request was rejected by the service.' });
       }
     } catch {
-      setUiMessage({ type: 'error', text: 'The booking service is unreachable right now. Please check connectivity and try again.' });
+      setUiMessage({ type: 'error', text: 'Booking transmission bridge lost. Check backend gateway logs.' });
     } finally {
       setSubmitLoading(false);
     }
@@ -241,8 +243,8 @@ export default function BookAppointment({ patientId }) {
         <div className="px-6 py-6 sm:px-8">
           {uiMessage.text && (
             <div className={`mb-6 rounded-2xl border px-4 py-3 text-sm font-medium ${
+              uiMessage.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' :
               uiMessage.type === 'warning' ? 'border-amber-200 bg-amber-50 text-amber-800' :
-              uiMessage.type === 'info' ? 'border-sky-200 bg-sky-50 text-sky-800' :
               'border-rose-200 bg-rose-50 text-rose-800'
             }`}>
               {uiMessage.text}
@@ -262,12 +264,9 @@ export default function BookAppointment({ patientId }) {
                     disabled={loadingSpecializations}
                     className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-10 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <option key="default-spec" value="">{loadingSpecializations ? '-- Loading specializations --' : '-- Choose Field Specialty --'}</option>
+                    <option value="">{loadingSpecializations ? '-- Loading specializations --' : '-- Choose Field Specialty --'}</option>
                     {specializations.map((spec) => <option key={spec} value={spec}>{spec}</option>)}
                   </select>
-                  <span className="pointer-events-none absolute inset-y-0 right-0 mr-4 flex items-center text-slate-400">
-                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z"/></svg>
-                  </span>
                 </div>
               </div>
 
@@ -281,7 +280,7 @@ export default function BookAppointment({ patientId }) {
                   disabled={!selectedSpecialization || doctors.length === 0 || loadingDoctors}
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <option key="default-doc" value="">{loadingDoctors ? '-- Loading doctors --' : '-- Select Available Doctor --'}</option>
+                  <option value="">{loadingDoctors ? '-- Loading doctors --' : '-- Select Available Doctor --'}</option>
                   {doctors.map(doc => <option key={doc.id} value={doc.id}>Dr. {doc.name || `${doc.firstName} ${doc.lastName}`}</option>)}
                 </select>
               </div>
@@ -318,8 +317,8 @@ export default function BookAppointment({ patientId }) {
                       onClick={() => handleSlotSelection(slot)}
                       className={`rounded-2xl border px-3 py-3 text-xs font-semibold transition ${
                         selectedTimeSlot === slot
-                          ? 'border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                          : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50'
+                          ? 'border-blue-600 bg-blue-600 text-white shadow-lg'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-blue-50'
                       }`}
                     >
                       {slot.substring(0, 5)}
@@ -328,7 +327,7 @@ export default function BookAppointment({ patientId }) {
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-400">
-                  Select a doctor and date to view the available appointment windows.
+                  Select a doctor and date to view available slots.
                 </div>
               )}
             </div>
@@ -341,15 +340,15 @@ export default function BookAppointment({ patientId }) {
                 value={medicalProblem}
                 onChange={(e) => setMedicalProblem(e.target.value)}
                 rows="4"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
-                placeholder="Describe symptoms, concerns, or any special instructions for your visit."
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4"
+                placeholder="Describe symptoms or concerns."
               />
             </div>
 
             <button
               type="submit"
               disabled={submitLoading || !selectedTimeSlot}
-              className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 text-sm font-bold uppercase tracking-[0.25em] text-white shadow-lg shadow-blue-600/30 transition hover:from-blue-700 hover:to-blue-800 disabled:cursor-not-allowed disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:shadow-none"
+              className="w-full rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 text-sm font-bold uppercase tracking-[0.25em] text-white shadow-lg shadow-blue-600/30 transition hover:from-blue-700 hover:to-blue-800 disabled:cursor-not-allowed disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400"
             >
               {submitLoading ? 'Submitting request...' : 'Confirm appointment'}
             </button>
@@ -357,49 +356,38 @@ export default function BookAppointment({ patientId }) {
         </div>
       </div>
 
-      {/* 🎯 NEW: Success Confirmation Modal Popup */}
+      {/* Confirmation Modal */}
       {confirmationData && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 transition-all duration-300 bg-slate-900/60 backdrop-blur-md">
-          <div className="w-full max-w-sm p-6 space-y-6 text-center bg-white border border-slate-100 rounded-3xl shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-center w-16 h-16 mx-auto text-emerald-600 bg-emerald-50 rounded-full shadow-inner">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+          <div className="w-full max-w-sm p-6 space-y-6 text-center bg-white rounded-3xl shadow-2xl">
+            <div className="flex items-center justify-center w-16 h-16 mx-auto text-emerald-600 bg-emerald-50 rounded-full">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
             <div>
               <h3 className="text-xl font-extrabold text-slate-900">Booking Confirmed!</h3>
-              <p className="px-2 mt-1.5 text-sm text-slate-500">
-                Your consultation has been successfully scheduled.
-              </p>
             </div>
-            
-            <div className="p-4 text-left bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
-              <div className="flex justify-between items-center text-sm border-b border-slate-200 pb-2">
-                <span className="font-bold text-[11px] uppercase tracking-wider text-slate-400">Doctor</span>
+            <div className="p-4 text-left bg-slate-50 rounded-2xl border space-y-3">
+              <div className="flex justify-between items-center text-sm border-b pb-2">
+                <span className="font-bold text-[11px] text-slate-400 uppercase">Doctor</span>
                 <span className="font-bold text-slate-800">{confirmationData.doctor}</span>
               </div>
-              <div className="flex justify-between items-center text-sm border-b border-slate-200 pb-2">
-                <span className="font-bold text-[11px] uppercase tracking-wider text-slate-400">Date</span>
+              <div className="flex justify-between items-center text-sm border-b pb-2">
+                <span className="font-bold text-[11px] text-slate-400 uppercase">Date</span>
                 <span className="font-bold text-slate-800">{confirmationData.date}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="font-bold text-[11px] uppercase tracking-wider text-slate-400">Time</span>
+                <span className="font-bold text-[11px] text-slate-400 uppercase">Time</span>
                 <span className="font-bold text-emerald-600">{confirmationData.time.substring(0, 5)}</span>
               </div>
             </div>
-
-            <div className="pt-2">
-              <button
-                onClick={() => setConfirmationData(null)}
-                className="w-full py-3 text-sm font-bold tracking-widest text-white uppercase transition rounded-2xl bg-slate-900 hover:bg-slate-800 shadow-md hover:shadow-lg"
-              >
-                Done
-              </button>
-            </div>
+            <button onClick={() => setConfirmationData(null)} className="w-full py-3 text-sm font-bold tracking-widest text-white uppercase rounded-2xl bg-slate-900">
+              Done
+            </button>
           </div>
         </div>
       )}
-
     </div>
   );
 }

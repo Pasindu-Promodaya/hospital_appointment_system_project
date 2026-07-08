@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
 
   const [loading, setLoading] = useState(false);
 
-  // 🔑 Clean state sync handler accepting the formatted user object from Login.jsx
+  //  Clean state sync handler accepting the formatted user object from Login.jsx
   const login = (userPayload) => {
     localStorage.setItem('authUser', JSON.stringify(userPayload));
     setUser(userPayload);

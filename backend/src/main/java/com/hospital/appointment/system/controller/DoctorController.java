@@ -47,29 +47,22 @@ public class DoctorController {
     public ResponseEntity<?> getTodayQueue(@PathVariable Long doctorId) {
         return ResponseEntity.ok(doctorService.getTodayQueue(doctorId));
     }
-
-    /**
-     * 🎯 FIX FOR THE 404 & 500 POLLING ERRORS
-     * GET http://localhost:8080/api/doctors/{doctorId}/schedule?day={dayOfWeek}
-     */
+   
     @GetMapping("/{doctorId}/schedule")
     public ResponseEntity<?> getDoctorSchedule(@PathVariable Long doctorId, @RequestParam String day) {
         
-        // 🎯 UPDATED to call the new "findFirstBy..." method
+        
         Optional<DoctorSchedule> schedule = scheduleRepository.findFirstByDoctorIdAndDayOfWeek(doctorId, day);
 
         if (schedule.isPresent()) {
             return ResponseEntity.ok(schedule.get());
         } else {
-            // Return empty JSON object so the frontend doesn't crash when a doctor hasn't set up a schedule yet
+           
             return ResponseEntity.ok().body("{}");
         }
     }
 
-    /**
-     * 🎯 DASHBOARD NO-SHOW ACTION
-     * PUT http://localhost:8080/api/doctors/appointments/{appointmentId}/no-show
-     */
+    
     @PutMapping("/appointments/{appointmentId}/no-show")
     public ResponseEntity<String> handlePatientNoShow(@PathVariable Long appointmentId) {
         try {

@@ -64,7 +64,9 @@ public class DoctorService {
         doctor.setEmail(dto.getEmail());
         doctor.setTelephoneNumber(dto.getTelephoneNumber());
         doctor.setSpecialization(dto.getSpecialization());
-        doctor.setSpecialty(dto.getSpecialization());
+        
+        // 🎯 REMOVED doctor.setSpecialty(dto.getSpecialization());
+        
         doctor.setLicenseNumber(dto.getLicenseNumber());
         doctor.setCreatedByAdminId(dto.getCreatedByAdminId());
 
@@ -79,11 +81,12 @@ public class DoctorService {
         return doctorRepository.save(doctor);
     }
 
-    public List<Doctor> getDoctorsBySpecialty(String specialty) {
-        if (specialty == null || specialty.isEmpty() || specialty.equalsIgnoreCase("All")) {
+    public List<Doctor> getDoctorsBySpecialty(String specialization) {
+        // Updated variable name from specialty to specialization for consistency
+        if (specialization == null || specialization.isEmpty() || specialization.equalsIgnoreCase("All")) {
             return doctorRepository.findByActiveStatusTrue();
         }
-        return doctorRepository.findBySpecializationContainingIgnoreCaseAndActiveStatusTrue(specialty);
+        return doctorRepository.findBySpecializationContainingIgnoreCaseAndActiveStatusTrue(specialization);
     }
 
     public DoctorSchedule saveSchedule(DoctorSchedule schedule) {

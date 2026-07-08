@@ -220,7 +220,7 @@ export default function AdminDashboard() {
         }
     };
 
-    // 🎯 FIXED DYNAMIC LAYOUT SORTING MATRIX
+
     const visibleRecords = useMemo(() => {
         return [...queueRecords].sort((a, b) => {
             const statusA = String(a.status).toUpperCase();
@@ -543,7 +543,7 @@ export default function AdminDashboard() {
                         {/* Extended Operations Analytics Box */}
                         <div className="bg-white rounded-[24px] border border-slate-200/70 p-5 shadow-sm">
                             <h4 className="m-0 mb-4 text-[10px] text-slate-400 uppercase font-black tracking-widest border-b border-slate-100 pb-2">
-                                📈 Operational Velocity
+                                📈Operational Velocity
                             </h4>
                             <div className="flex justify-between py-2.5 border-b border-slate-100/60 text-xs font-bold">
                                 <span className="text-slate-400">Active Medical Staff:</span>

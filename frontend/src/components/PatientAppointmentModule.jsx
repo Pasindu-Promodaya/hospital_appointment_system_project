@@ -6,11 +6,10 @@ import ManageAppointments from './ManageAppointments';
 export default function PatientAppointmentModule({ patientId }) {
   const [activeTab, setActiveTab] = useState('book');
   const [activePatientId, setActivePatientId] = useState(null);
-  const location = useLocation(); // 🎯 Keep tabs on incoming navigation states
+  const location = useLocation(); 
 
   // Authentication validation logic remains here...
 
-  // 🎯 FIX: Wakes up whenever an authenticated patient clicks a new doctor card from the directory
   useEffect(() => {
     if (location.state?.doctor) {
       setActiveTab('book');
@@ -24,7 +23,7 @@ export default function PatientAppointmentModule({ patientId }) {
       {/* Tab toggle buttons remain here... */}
 
       {activeTab === 'book' ? (
-        /* 🎯 CRITICAL: Explicitly pass location down as a prop */
+        /* Explicitly pass location down as a prop */
         <BookAppointment patientId={activePatientId} location={location} />
       ) : (
         <ManageAppointments patientId={activePatientId} />

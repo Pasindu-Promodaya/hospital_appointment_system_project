@@ -11,7 +11,7 @@ import java.time.LocalTime;
 
 @Entity
 @Table(name = "appointments")
-@DynamicUpdate // Optimizes database updates by only modifying changed columns
+@DynamicUpdate 
 public class Appointment {
 
     @Id
@@ -49,7 +49,7 @@ public class Appointment {
     @Column(name = "status", nullable = false, length = 50 )
     private AppointmentStatus status = AppointmentStatus.PENDING;
 
-    // 🎯 FIXED: Removed @Transient and added Hibernate auto-timestamps
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

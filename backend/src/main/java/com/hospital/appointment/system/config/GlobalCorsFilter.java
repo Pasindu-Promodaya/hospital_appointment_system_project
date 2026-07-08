@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE) // 🎯 Forces this to run before ANYTHING else (even Security)
+@Order(Ordered.HIGHEST_PRECEDENCE) 
 public class GlobalCorsFilter implements Filter {
 
     @Override
@@ -28,14 +28,14 @@ public class GlobalCorsFilter implements Filter {
         response.setHeader("Access-Control-Allow-Methods", "POST, GET, PUT, OPTIONS, DELETE");
         response.setHeader("Access-Control-Max-Age", "3600"); // Cache the "Yes" for 1 hour
         
-        // 🎯 The Magic Line: Explicitly allows your custom headers in lowercase
+        
         response.setHeader("Access-Control-Allow-Headers", "authorization, content-type, accept, admin-id, x-patient-id");
 
-        // If it's a preflight OPTIONS request, send an immediate OK (200) and stop processing
+       
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             response.setStatus(HttpServletResponse.SC_OK);
         } else {
-            // Otherwise, let the request continue to the Controller
+            
             chain.doFilter(req, res);
         }
     }

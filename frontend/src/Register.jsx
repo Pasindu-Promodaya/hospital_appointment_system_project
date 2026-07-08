@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { useAuth } from './context/AuthContext'; // 🎯 FIX: Import global Auth context hook
+import { useAuth } from './context/AuthContext'; 
 
 const Register = () => {
-  const { login } = useAuth(); // 🎯 FIX: Destructure your context state manager dispatcher
+  const { login } = useAuth(); 
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     dateOfBirth: '',
+    gender: '', 
     telephoneNumber: '',
     email: '',
     password: '',
@@ -31,6 +32,26 @@ const Register = () => {
       return;
     }
 
+    if (!formData.gender) {
+      setError('Please select a gender.');
+      return;
+    }
+
+    // phone number to perfect international standard (+947xxxxxxxx)
+    let formattedPhone = formData.telephoneNumber.trim().replace(/\s+|-|\(|\)/g, '');
+
+    if (formattedPhone.startsWith('0')) {
+      formattedPhone = '+94' + formattedPhone.substring(1);
+    } else if (formattedPhone.startsWith('+940')) {
+      formattedPhone = '+94' + formattedPhone.substring(4);
+    } else if (formattedPhone.startsWith('940')) {
+      formattedPhone = '+94' + formattedPhone.substring(3);
+    } else if (formattedPhone.startsWith('94') && !formattedPhone.startsWith('+94')) {
+      formattedPhone = '+' + formattedPhone;
+    } else if (!formattedPhone.startsWith('+')) {
+      formattedPhone = '+94' + formattedPhone;
+    }
+
     setLoading(true);
 
     try {
@@ -40,14 +61,15 @@ const Register = () => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         dateOfBirth: formData.dateOfBirth,
-        phone: formData.telephoneNumber 
+        gender: formData.gender, 
+        phone: formattedPhone
       };
       
-      // 🎯 FIX: Updated to point directly to your live Spring Boot backend server ports
+      // 1. Post complete registration parameters
       await axios.post('http://localhost:8080/api/auth/register', payload);
       
-      // Attempt automated authentication process right after a clean account creation
-      const loginResponse = await axios.post('http://localhost:8080/api/auth/login', {
+      //  Route redirected to explicit patient portal authentication pipeline
+      const loginResponse = await axios.post('http://localhost:8080/api/auth/login/patient', {
         email: formData.email, 
         password: formData.password
       });
@@ -55,16 +77,15 @@ const Register = () => {
       const data = loginResponse.data;
 
       if (data && loginResponse.status === 200) {
-        // 🔑 🎯 FIX: Seed parameters securely into the global React app lifecycle memory engine
+        //  Map identity properties directly using the layout variables sent by AuthResponse.java
         login({
           token: data.token,
           email: data.email,
           role: data.role || 'ROLE_PATIENT',
-          id: data.id || null,
-          doctorId: data.doctorId || null
+          id: data.id,                 // User Primary Key Account ID (e.g., 24)
+          patientId: data.patientId,   // True Patient Profile Record row ID (e.g., 17)
+          doctorId: null
         });
-
-        // 🚀 Smooth transition over to your Patient Dashboard layout
         navigate('/dashboard');
       } else {
         setError('Account created successfully, but profile initialization failed. Please try signing in manually.');
@@ -101,7 +122,6 @@ const Register = () => {
 
         <form onSubmit={handleRegister} className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* First Name */}
             <div className="relative">
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">First Name</label>
               <div className="absolute inset-y-0 left-0 top-6 pl-3 flex items-center pointer-events-none">
@@ -109,33 +129,43 @@ const Register = () => {
               </div>
               <input type="text" name="firstName" required value={formData.firstName} onChange={handleChange} className="w-full text-sm pl-10 px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/30 font-medium" />
             </div>
-            {/* Last Name */}
             <div className="relative">
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Last Name</label>
               <input type="text" name="lastName" required value={formData.lastName} onChange={handleChange} className="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/30 font-medium" />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* DOB */}
-            <div className="relative">
+            <div className="relative sm:col-span-1">
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Date of Birth</label>
               <div className="absolute inset-y-0 left-0 top-6 pl-3 flex items-center pointer-events-none">
                 <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               </div>
               <input type="date" name="dateOfBirth" required value={formData.dateOfBirth} onChange={handleChange} className="w-full text-sm pl-10 px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/30 font-medium text-slate-700" />
             </div>
-            {/* Phone */}
-            <div className="relative">
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Telephone Number</label>
-              <div className="absolute inset-y-0 left-0 top-6 pl-3 flex items-center pointer-events-none">
-                <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+
+            {/* Gender dropdown */}
+            <div className="relative sm:col-span-1">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Gender</label>
+              <select name="gender" required value={formData.gender} onChange={handleChange} className="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/30 font-medium text-slate-700 appearance-none">
+                <option value="" disabled>Select</option>
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 top-6 pr-3 flex items-center pointer-events-none">
+                <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
               </div>
-              <input type="tel" name="telephoneNumber" required value={formData.telephoneNumber} onChange={handleChange} className="w-full text-sm pl-10 px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/30 font-medium" placeholder="(555) 000-0000" />
+            </div>
+
+            {/* Phone */}
+            <div className="relative sm:col-span-1">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Phone Number</label>
+              <input type="tel" name="telephoneNumber" required value={formData.telephoneNumber} onChange={handleChange} className="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/30 font-medium" placeholder="076 836 5307" />
             </div>
           </div>
 
-          {/* Email */}
           <div className="relative">
             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Email Address</label>
             <div className="absolute inset-y-0 left-0 top-6 pl-3 flex items-center pointer-events-none">
@@ -145,7 +175,6 @@ const Register = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Password */}
             <div className="relative">
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Security Password</label>
               <div className="absolute inset-y-0 left-0 top-6 pl-3 flex items-center pointer-events-none">
@@ -153,7 +182,6 @@ const Register = () => {
               </div>
               <input type="password" name="password" required value={formData.password} onChange={handleChange} className="w-full text-sm pl-10 px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/30 font-medium" placeholder="••••••••" />
             </div>
-            {/* Confirm Password */}
             <div className="relative">
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Confirm Password</label>
               <input type="password" name="confirmPassword" required value={formData.confirmPassword} onChange={handleChange} className="w-full text-sm px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition bg-slate-50/30 font-medium" placeholder="••••••••" />

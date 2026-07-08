@@ -9,4 +9,4 @@ const BookingPage = () => {
   );
 };
 
-export default BookingPage; // 👈 MAKE SURE THIS IS HERE
+export default BookingPage; 
