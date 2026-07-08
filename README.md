@@ -1,6 +1,6 @@
 # Hospital Appointment System
 
-Module Code: **IT3100 - Software Architechure And Design**
+Module Code: **SWST 32043 - Software Architecture and Concepts**
 
 ---
 
